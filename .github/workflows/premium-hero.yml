@@ -1,0 +1,38 @@
+name: Blender Premium Hero Review
+on:
+  push:
+    branches:
+      - feature/premium-3d-world
+    paths:
+      - tools/blender/**
+      - .github/workflows/premium-hero.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build-asset:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned official Blender 4.5.14
+        run: |
+          curl -fsSL --retry 3 https://download.blender.org/release/Blender4.5/blender-4.5.14-linux-x64.tar.xz -o /tmp/blender.tar.xz
+          tar -xf /tmp/blender.tar.xz -C /tmp
+          echo "/tmp/blender-4.5.14-linux-x64" >> "$GITHUB_PATH"
+      - name: Generate editable Blender source, GLB and reference render
+        run: |
+          mkdir -p production-preview
+          ASSET_OUT=production-preview blender --background --factory-startup --python tools/blender/make_hero.py | tee /tmp/art.log
+          grep -q "SUCCESS: hero preview" /tmp/art.log
+          test -s production-preview/hero_squishy.blend
+          test -s production-preview/hero_squishy.glb
+          test -s production-preview/hero_preview.png
+      - name: Verify GLB morph targets and material payload
+        run: python3 tools/blender/validate_glb.py production-preview/hero_squishy.glb
+      - name: Upload review files
+        uses: actions/upload-artifact@v4
+        with:
+          name: squishy-hero-blender-review
+          path: production-preview/
+          retention-days: 14
