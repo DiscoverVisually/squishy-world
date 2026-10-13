@@ -12,6 +12,9 @@ const FLOWER_COLORS: Array[Color] = [Color("fff3b0"), Color("ffc8e0"), Color("f6
 @onready var player: CharacterBody2D = $Player
 @onready var hud: SquishyHUD = $HUD
 @onready var arena: LauncherArena = $Encounter/Arena
+@onready var merge_arena: MergeArena = $Encounter/Merge
+@onready var choice: EncounterChoice = $Encounter/Choice
+var encounter_creature: WildSquishy = null
 var selected_grade: int = 2
 var caught_names: Array[String] = []
 var nearby_squishy: WildSquishy = null
@@ -22,6 +25,10 @@ func _ready() -> void:
     _load_progress()
     arena.captured.connect(_on_squishy_captured)
     arena.cancelled.connect(_on_encounter_cancelled)
+    merge_arena.captured.connect(_on_squishy_captured)
+    merge_arena.cancelled.connect(_on_encounter_cancelled)
+    choice.selected.connect(_on_choice_selected)
+    choice.cancelled.connect(_on_encounter_cancelled)
     hud.set_progress(selected_grade, caught_names.size())
     for tree in TREES:
         _add_round_obstacle(tree + Vector2(0, 24), 27.0)
@@ -43,7 +50,7 @@ func _ready() -> void:
         wild_squishies.append(creature)
 
 func _process(delta: float) -> void:
-    if arena.active:
+    if arena.active or merge_arena.active or choice.active:
         return
     status_clock -= delta
     if status_clock <= 0.0:
@@ -61,7 +68,7 @@ func _process(delta: float) -> void:
         hud.set_nearby("Nájdi Squishyho! Zbierka: %d/5" % caught_names.size())
 
 func _unhandled_input(event: InputEvent) -> void:
-    if arena.active or not (event is InputEventKey):
+    if arena.active or merge_arena.active or choice.active or not (event is InputEventKey):
         return
     if not event.pressed or event.echo:
         return
@@ -73,8 +80,18 @@ func _unhandled_input(event: InputEvent) -> void:
     elif event.keycode == KEY_E and nearby_squishy != null and is_instance_valid(nearby_squishy):
         player.set_physics_process(false)
         hud.visible = false
-        arena.start_encounter(nearby_squishy.display_name, nearby_squishy.body_color, selected_grade)
+        encounter_creature = nearby_squishy
+        choice.show_choice(nearby_squishy.display_name, nearby_squishy.body_color)
         get_viewport().set_input_as_handled()
+
+func _on_choice_selected(mode: String) -> void:
+    if encounter_creature == null or not is_instance_valid(encounter_creature):
+        _on_encounter_cancelled()
+        return
+    if mode == "merge":
+        merge_arena.start_encounter(encounter_creature.display_name, encounter_creature.body_color, selected_grade)
+    else:
+        arena.start_encounter(encounter_creature.display_name, encounter_creature.body_color, selected_grade)
 
 func _on_squishy_captured(squishy_name: String) -> void:
     if not caught_names.has(squishy_name):
@@ -90,6 +107,7 @@ func _on_squishy_captured(squishy_name: String) -> void:
     hud.set_nearby("Získal si %s! Zbierka: %d/5" % [squishy_name, caught_names.size()])
 
 func _on_encounter_cancelled() -> void:
+    encounter_creature = null
     player.set_physics_process(true)
     hud.visible = true
     status_clock = 0.0

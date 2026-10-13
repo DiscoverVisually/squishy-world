@@ -1,9 +1,11 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=7 format=3]
 
 [ext_resource type="Script" path="res://scripts/world.gd" id="1_world"]
 [ext_resource type="PackedScene" path="res://scenes/player_squishy.tscn" id="2_player"]
 [ext_resource type="Script" path="res://scripts/hud.gd" id="3_hud"]
 [ext_resource type="Script" path="res://scripts/launcher_arena.gd" id="4_launcher"]
+[ext_resource type="Script" path="res://scripts/merge_arena.gd" id="5_merge"]
+[ext_resource type="Script" path="res://scripts/encounter_choice.gd" id="6_choice"]
 
 [node name="Meadow" type="Node2D"]
 script = ExtResource("1_world")
@@ -20,3 +22,11 @@ layer = 10
 [node name="Arena" type="Node2D" parent="Encounter"]
 visible = false
 script = ExtResource("4_launcher")
+
+[node name="Merge" type="Node2D" parent="Encounter"]
+visible = false
+script = ExtResource("5_merge")
+
+[node name="Choice" type="Node2D" parent="Encounter"]
+visible = false
+script = ExtResource("6_choice")

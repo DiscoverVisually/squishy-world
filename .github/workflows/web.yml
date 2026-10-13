@@ -38,6 +38,8 @@ jobs:
           fi
       - name: Test math challenge correctness
         run: godot --headless --path . --script res://tests/math_smoke.gd
+      - name: Verify Jelly Merge grade rules
+        run: godot --headless --path . --script res://tests/merge_smoke.gd
       - name: Smoke-test game startup
         run: |
           godot --headless --path . --quit-after 5 > /tmp/squishy-runtime.log 2>&1

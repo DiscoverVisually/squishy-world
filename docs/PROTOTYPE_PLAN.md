@@ -35,3 +35,11 @@
 - [ ] No tracking, no ads, no payments.
 
 Each ticket must pass headless import, Web export and an honest browser smoke-test status before being marked done.
+
+## Version 0.3 — Jelly Merge and game choice
+- [x] Encounter choice: Launcher (1) or Jelly Merge (2)
+- [x] Physics-based RigidBody2D numbers bounce and merge by addition
+- [x] Mouse aim and dropping, four starting-grade goals, retries without penalty
+- [x] Integrate rewards into existing collection save, preserving v0.2 progress
+- [ ] Browser playtest and refined physics balance
+- [ ] Broader mathematical exercises beyond doubling

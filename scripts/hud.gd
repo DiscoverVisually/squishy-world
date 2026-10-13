@@ -46,7 +46,7 @@ func _ready() -> void:
     tag.add_theme_color_override("font_color", Color("547e71"))
     tag.add_theme_font_size_override("font_size", 17)
     tag.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-    tag.text = "Minihra: Squishy Launcher"
+    tag.text = "Výzvy: Launcher a Jelly Merge"
     overlay.add_child(tag)
 
 func set_progress(grade: int, caught: int) -> void:
