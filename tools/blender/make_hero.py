@@ -19,14 +19,14 @@ def material(name,rgb,rough=.23,coat=.22):
     node.inputs["Roughness"].default_value=rough
     node.inputs["Coat Weight"].default_value=coat
     return m
-jade=material("Jade_Gel_WebOpaque",(.16,.86,.45))
-mint=material("InnerMint",(.36,.99,.61))
+jade=material("Jade_Gel_WebOpaque",(.09,.64,.29),.15,.39)
+mint=material("InnerMint",(.19,.80,.40),.16,.40)
 outline=material("Eye_Outline",(.045,.10,.12),.35)
-white=material("Ivory_Eye",(1,.99,.96),.15)
-iris=material("SeaGlass_Iris",(.14,.49,.45),.20)
-pupil=material("Ink_Pupil",(.02,.04,.065),.12)
+white=material("Ivory_Eye",(1,.98,.92),.15)
+iris=material("WarmIris",(.42,.29,.16),.15)
+pupil=material("Ink_Pupil",(.025,.020,.026),.11)
 shine=material("Eye_Gloss",(1,1,1),.12)
-blush=material("Coral_Blush",(.98,.48,.54),.5)
+blush=material("Coral_Blush",(.67,.26,.34),.47)
 lip=material("Raspberry_Mouth",(.25,.04,.095),.4)
 tongue=material("Tongue",(.99,.44,.52),.45)
 def runtime(obj):
@@ -49,11 +49,11 @@ body=sphere("SquishyBody",(0,0,0),(1,1,1),jade,80,50)
 raw=[]
 for v in body.data.vertices:
     x,y,z=v.co
-    width=.84+.16*(1-z)/2
-    depth=.73+.12*(1-z)/2
+    width=.90+.10*(1-z)/2
+    depth=.80+.06*(1-z)/2
     xx=x*width*(1+.024*sin(3*y+z))
     yy=y*depth
-    zz=.98+.89*z+.025*sin(4*x+2*y)*(1-abs(z))
+    zz=.92+.79*z+.02*sin(4*x+2*y)*(1-abs(z))
     if zz<.12: zz=.12+(zz-.12)*.15
     v.co=(xx,yy,zz)
     raw.append(v.co.copy())
@@ -70,24 +70,23 @@ key("Impact",lambda p:Vector((p.x*1.16,p.y*1.12,.12+(p.z-.12)*.78)))
 key("PokeFront",lambda p:Vector((p.x,p.y+.22*exp(-(p.x/.35)**2-((p.z-1.1)/.40)**2)*max(0,-p.y),p.z)))
 key("HappyWiggle",lambda p:Vector((p.x+.11*sin(p.z*3.1),p.y,p.z)))
 for x,z,scale,m in [
-    (-.19,1.77,(.15,.15,.20),mint),(.21,1.80,(.105,.12,.16),jade),
-    (-.78,.76,(.22,.31,.24),jade),(.78,.76,(.22,.31,.24),jade),
-    (-.47,.19,(.37,.38,.18),jade),(.47,.19,(.37,.38,.18),jade)]:
+    (-.18,1.65,(.115,.14,.155),mint),(.18,1.66,(.085,.11,.12),jade),
+    (-.81,.62,(.17,.24,.20),jade),(.81,.62,(.17,.24,.20),jade),
+    (-.43,.15,(.28,.32,.135),jade),(.43,.15,(.28,.32,.135),jade)]:
     sphere("Gel_Appendage", (x,0,z),scale,m)
 # Face is separately animated later by FaceAnchor to preserve eye placement on body deformation.
 for side in (-1,1):
     x=side*.33
     tag="L" if side<0 else "R"
-    sphere("EyeRim_"+tag,(x,-.731,1.18),(.29,.13,.35),outline)
-    sphere("EyeIvory_"+tag,(x,-.822,1.19),(.27,.11,.325),white)
-    sphere("Iris_"+tag,(x-side*.035,-.913,1.14),(.187,.07,.225),iris)
-    sphere("Pupil_"+tag,(x-side*.035,-.974,1.15),(.137,.038,.18),pupil)
-    sphere("Catchlight_"+tag,(x-side*.035-.055,-1.013,1.23),(.06,.023,.069),shine,24,16)
-    sphere("Blush_"+tag,(side*.67,-.58,.78),(.17,.025,.085),blush)
-    brow=sphere("Brow_"+tag,(side*.35,-.774,1.55),(.145,.028,.040),outline,32,20)
-    brow.rotation_euler[1]=side*.17
-sphere("Mouth",(0,-.813,.70),(.22,.066,.257),lip)
-sphere("Tongue",(0,-.870,.56),(.14,.043,.084),tongue)
+    sphere("EyeRim_"+tag,(x,-.726,1.09),(.255,.066,.294),outline)
+    sphere("EyeIvory_"+tag,(x,-.763,1.10),(.235,.047,.270),white)
+    sphere("Iris_"+tag,(x-side*.025,-.807,1.075),(.160,.029,.184),iris)
+    sphere("Pupil_"+tag,(x-side*.025,-.835,1.080),(.123,.018,.145),pupil)
+    sphere("Catchlight_"+tag,(x-side*.025-.045,-.851,1.14),(.048,.013,.059),shine,24,16)
+    sphere("Blush_"+tag,(side*.60,-.64,.80),(.12,.010,.050),blush)
+    # Brows intentionally omitted: the hero reads more warm and toy-like without brows.
+sphere("Mouth",(0,-.796,.67),(.18,.022,.182),lip)
+sphere("Tongue",(0,-.823,.574),(.099,.015,.057),tongue)
 
 bpy.ops.object.select_all(action="DESELECT")
 for ob in coll.objects: ob.select_set(True)
@@ -101,16 +100,16 @@ bpy.ops.export_scene.gltf(filepath=glb, export_format="GLB",
 
 # Studio render for reviewing volume/face/material candidate (not proof of browser fidelity).
 bpy.ops.object.select_all(action="DESELECT")
-bpy.ops.object.camera_add(location=(3.0,-5.2,2.65))
+bpy.ops.object.camera_add(location=(2.55,-5.9,2.42))
 camera=bpy.context.object
 camera.rotation_euler=(Vector((0,0,1.04))-camera.location).to_track_quat("-Z","Y").to_euler()
 camera.data.type="ORTHO"
-camera.data.ortho_scale=3.45
+camera.data.ortho_scale=3.15
 bpy.context.scene.camera=camera
 for pos,power,size,color in [
-    ((0,-4.0,5.0),850,4.0,(1.0,.92,.86)),
-    ((3,1.3,4.1),900,3.5,(.47,.96,1)),
-    ((-3,-1.0,2.3),300,3.0,(1,.70,.69))]:
+    ((0,-4.0,5.0),440,4.0,(1.0,.93,.85)),
+    ((3,1.3,4.1),580,3.5,(.57,.94,1)),
+    ((-3,-1.0,2.3),180,3.0,(1,.70,.69))]:
     bpy.ops.object.light_add(type="AREA",location=pos)
     o=bpy.context.object
     o.data.energy=power
@@ -124,7 +123,7 @@ scene.cycles.samples=16
 scene.render.resolution_x=720
 scene.render.resolution_y=720
 scene.render.resolution_percentage=100
-scene.world.color=(.18,.24,.29)
+scene.world.color=(.12,.15,.19)
 scene.render.image_settings.file_format="PNG"
 scene.render.filepath=os.path.join(out,"hero_preview.png")
 bpy.ops.render.render(write_still=True)
