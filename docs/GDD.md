@@ -1,6 +1,6 @@
 # Squishy World — Game Design Document v1.0
 
-**Approved direction:** Cute 2.5D-style 2D adventure in Slovak, hosted as WebAssembly/WebGL2, designed for children aged approximately 7–10.
+**Approved production direction 2026-10-13:** Jelly Fantasy, cartoon-premium tactile Squishies, Blender-authored **real 3D overworld with orthographic camera** and 2.5D-style gameplay. The Node2D/primitive landscape described later is a legacy v0.3 prototype, not final art. See production docs under docs/PREMIUM_*.md and docs/BLENDER_GODOT_CHARACTER_PIPELINE_V1.md.
 
 ## Game loop
 Create a Squishy profile → roam colorful overworld → encounter wild Squishies → win a playful mathematical minigame → recruit a Squishy → update collection → keep exploring.
