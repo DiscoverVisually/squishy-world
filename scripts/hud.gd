@@ -2,6 +2,7 @@ extends CanvasLayer
 class_name SquishyHUD
 
 var proximity_label: Label
+var progress_label: Label
 
 func _ready() -> void:
     var overlay := Control.new()
@@ -11,15 +12,17 @@ func _ready() -> void:
     overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
     var top_panel := PanelContainer.new()
     top_panel.position = Vector2(22, 22)
-    top_panel.custom_minimum_size = Vector2(343, 130)
+    top_panel.custom_minimum_size = Vector2(372, 179)
     _set_panel_style(top_panel)
     overlay.add_child(top_panel)
     var vbox := VBoxContainer.new()
     vbox.add_theme_constant_override("separation", 5)
     top_panel.add_child(vbox)
     _add_label(vbox, "SQUISHY WORLD", 28, Color("3b756a"))
-    _add_label(vbox, "ŽELÉ LÚKA · PROTOTYP 0.1", 15, Color("6c8d83"))
-    _add_label(vbox, "Pohyb: WASD alebo šípky", 17, Color("3e625c"))
+    _add_label(vbox, "ŽELÉ LÚKA · PROTOTYP 0.2", 15, Color("6c8d83"))
+    _add_label(vbox, "WASD / šípky · E = stretnutie", 17, Color("3e625c"))
+    _add_label(vbox, "Matematika: stlač 1, 2, 3 alebo 4", 15, Color("55786a"))
+    progress_label = _add_label(vbox, "Ročník 2 · zbierka 0/5", 16, Color("476f66"))
     var bottom_panel := PanelContainer.new()
     bottom_panel.anchor_top = 1.0
     bottom_panel.anchor_bottom = 1.0
@@ -43,8 +46,12 @@ func _ready() -> void:
     tag.add_theme_color_override("font_color", Color("547e71"))
     tag.add_theme_font_size_override("font_size", 17)
     tag.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-    tag.text = "Zbieranie a minihry: ďalší míľnik"
+    tag.text = "Minihra: Squishy Launcher"
     overlay.add_child(tag)
+
+func set_progress(grade: int, caught: int) -> void:
+    if progress_label != null:
+        progress_label.text = "Ročník %d · zbierka %d/5" % [grade, caught]
 
 func set_nearby(value: String) -> void:
     if proximity_label != null and proximity_label.text != value:
@@ -62,9 +69,10 @@ func _set_panel_style(panel: PanelContainer) -> void:
     style.content_margin_bottom = 12.0
     panel.add_theme_stylebox_override("panel", style)
 
-func _add_label(box: VBoxContainer, value: String, font_size: int, tint: Color) -> void:
+func _add_label(box: VBoxContainer, value: String, font_size: int, tint: Color) -> Label:
     var label := Label.new()
     label.text = value
     label.add_theme_font_size_override("font_size", font_size)
     label.add_theme_color_override("font_color", tint)
     box.add_child(label)
+    return label

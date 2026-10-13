@@ -11,10 +11,18 @@ const FLOWER_COLORS: Array[Color] = [Color("fff3b0"), Color("ffc8e0"), Color("f6
 
 @onready var player: CharacterBody2D = $Player
 @onready var hud: SquishyHUD = $HUD
+@onready var arena: LauncherArena = $Encounter/Arena
+var selected_grade: int = 2
+var caught_names: Array[String] = []
+var nearby_squishy: WildSquishy = null
 var wild_squishies: Array[WildSquishy] = []
 var status_clock: float = 0.0
 
 func _ready() -> void:
+    _load_progress()
+    arena.captured.connect(_on_squishy_captured)
+    arena.cancelled.connect(_on_encounter_cancelled)
+    hud.set_progress(selected_grade, caught_names.size())
     for tree in TREES:
         _add_round_obstacle(tree + Vector2(0, 24), 27.0)
     _add_round_obstacle(Vector2(1160, 520), 48.0)
@@ -27,27 +35,78 @@ func _ready() -> void:
         ["Lulu", Color("fdbaa8"), Vector2(1790, 1180)]
     ]
     for data in npc_data:
+        if caught_names.has(String(data[0])):
+            continue
         var creature: WildSquishy = WildSquishy.new()
         creature.configure(data[0], data[1], data[2], wild_squishies.size())
         add_child(creature)
         wild_squishies.append(creature)
 
 func _process(delta: float) -> void:
-    status_clock -= delta
-    if status_clock > 0.0:
+    if arena.active:
         return
-    status_clock = 0.16
-    var nearest: WildSquishy = null
-    var distance: float = 110.0
-    for creature in wild_squishies:
-        var d := player.global_position.distance_to(creature.global_position)
-        if d < distance:
-            nearest = creature
-            distance = d
-    if nearest != null:
-        hud.set_nearby("Ahoj! Toto je %s. Výzvy pribudnú čoskoro!" % nearest.display_name)
+    for grade_key in range(1, 5):
+        if Input.is_key_just_pressed(KEY_1 + grade_key - 1):
+            selected_grade = grade_key
+            hud.set_progress(selected_grade, caught_names.size())
+            _save_progress()
+    status_clock -= delta
+    if status_clock <= 0.0:
+        status_clock = 0.12
+        nearby_squishy = null
+        var nearest_distance: float = 116.0
+        for creature in wild_squishies:
+            var distance: float = player.global_position.distance_to(creature.global_position)
+            if distance < nearest_distance:
+                nearby_squishy = creature
+                nearest_distance = distance
+    if nearby_squishy != null and is_instance_valid(nearby_squishy):
+        hud.set_nearby("Stlač E pri %s a spusti výzvu!" % nearby_squishy.display_name)
+        if Input.is_key_just_pressed(KEY_E):
+            player.set_physics_process(false)
+            hud.visible = false
+            arena.start_encounter(nearby_squishy.display_name, nearby_squishy.body_color, selected_grade)
     else:
-        hud.set_nearby("Preskúmaj lúku a nájdi Squishies!")
+        hud.set_nearby("Nájdi Squishyho! Zbierka: %d/5" % caught_names.size())
+
+func _on_squishy_captured(squishy_name: String) -> void:
+    if not caught_names.has(squishy_name):
+        caught_names.append(squishy_name)
+    for creature in wild_squishies.duplicate():
+        if creature.display_name == squishy_name:
+            wild_squishies.erase(creature)
+            creature.queue_free()
+    nearby_squishy = null
+    hud.set_progress(selected_grade, caught_names.size())
+    _save_progress()
+    _on_encounter_cancelled()
+    hud.set_nearby("Získal si %s! Zbierka: %d/5" % [squishy_name, caught_names.size()])
+
+func _on_encounter_cancelled() -> void:
+    player.set_physics_process(true)
+    hud.visible = true
+    status_clock = 0.0
+
+func _load_progress() -> void:
+    if not FileAccess.file_exists("user://squishy_save_v02.json"):
+        return
+    var file := FileAccess.open("user://squishy_save_v02.json", FileAccess.READ)
+    if file == null:
+        return
+    var payload: Variant = JSON.parse_string(file.get_as_text())
+    if payload is Dictionary:
+        selected_grade = clampi(int(payload.get("grade", 2)), 1, 4)
+        var collection: Variant = payload.get("caught", [])
+        if collection is Array:
+            for entry in collection:
+                var squishy_name: String = String(entry)
+                if squishy_name in ["Pip", "Bubi", "Momo", "Kiki", "Lulu"] and not caught_names.has(squishy_name):
+                    caught_names.append(squishy_name)
+
+func _save_progress() -> void:
+    var file := FileAccess.open("user://squishy_save_v02.json", FileAccess.WRITE)
+    if file != null:
+        file.store_string(JSON.stringify({"grade": selected_grade, "caught": caught_names}))
 
 func _add_round_obstacle(origin: Vector2, radius: float) -> void:
     var obstacle := StaticBody2D.new()

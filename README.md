@@ -1,6 +1,6 @@
 # Squishy World
 
-Cute math-adventure project for children. Current version: **exploration-only prototype** (not yet complete minigame/collecting).
+Cute math-adventure project for children. Current version: **prototype 0.2** with the first math-and-skill challenge, Squishy Launcher.
 
 ## Play
 
@@ -8,7 +8,7 @@ After the owner enables **Settings → Pages → Build and deployment → Source
 
 https://discovervisually.github.io/squishy-world/
 
-Use **WASD or arrow keys** to walk. Look for five squishy creatures in the meadow. The collecting and math minigames will arrive in later milestones.
+Use **WASD or arrow keys** to walk. Press **1–4** to select a Slovak math-grade starting level. Stand near a wild Squishy and press **E**. Aim the launcher with your mouse and click to shoot at the correct answer. Gravity affects the trajectory; a dotted preview shows the flight path. Hit the correct target to recruit the Squishy. Escape quits the encounter. Collection and grade are saved locally in the browser. The Jelly Merge minigame, character profiles, and richer collection view are later milestones.
 
 ## No local installation
 

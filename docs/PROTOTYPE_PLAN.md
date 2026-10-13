@@ -9,10 +9,14 @@
 - [ ] Confirm Godot headless import succeeds on GitHub Actions.
 - [ ] Confirm GitHub Pages export runs and browser gameplay works.
 
-## Milestone 2: SW-020, SW-021, SW-022
+## Milestone 2: SW-020, SW-021, SW-022 (prototype 0.2)
 - [ ] NPC approach/flee behaviors.
-- [ ] Encounter transition and return to world.
-- [ ] Collection UI, five recruitable Squishies, persistence.
+- [x] E to start nearby Squishy encounter, ESC to exit.
+- [x] First math-and-aiming minigame: Squishy Launcher.
+- [x] Four grade presets with locally validated answer options.
+- [x] Recruitment after hitting correct target; collection counter and local save.
+- [ ] Verify automatic cloud checks and real-browser gameplay.
+- [ ] Larger collection UI and Squishy identity customization.
 
 ## Milestone 3: SW-030–SW-034
 - [ ] Slovak curriculum cycle/grade starting presets.

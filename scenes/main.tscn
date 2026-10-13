@@ -1,8 +1,9 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://scripts/world.gd" id="1_world"]
 [ext_resource type="PackedScene" path="res://scenes/player_squishy.tscn" id="2_player"]
 [ext_resource type="Script" path="res://scripts/hud.gd" id="3_hud"]
+[ext_resource type="Script" path="res://scripts/launcher_arena.gd" id="4_launcher"]
 
 [node name="Meadow" type="Node2D"]
 script = ExtResource("1_world")
@@ -12,3 +13,10 @@ position = Vector2(1024, 770)
 
 [node name="HUD" type="CanvasLayer" parent="."]
 script = ExtResource("3_hud")
+
+[node name="Encounter" type="CanvasLayer" parent="."]
+layer = 10
+
+[node name="Arena" type="Node2D" parent="Encounter"]
+visible = false
+script = ExtResource("4_launcher")
