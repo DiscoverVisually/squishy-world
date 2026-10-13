@@ -8,7 +8,7 @@ After the owner enables **Settings → Pages → Build and deployment → Source
 
 https://discovervisually.github.io/squishy-world/
 
-Use **WASD or arrow keys** to walk. Press **1–4** to select a Slovak math-grade starting level. Stand near a wild Squishy and press **E**, then choose **1** for Launcher or **2** for Jelly Merge. In Jelly Merge, click over the tank to drop a numbered jelly blob; equal-value blobs merge by addition until you reach the target. **R** restarts the merge game; **Escape** returns to the map. The original Launcher game remains available. Gravity affects the trajectory; a dotted preview shows the flight path. Hit the correct target to recruit the Squishy. Escape quits the encounter. Collection and grade are saved locally in the browser. The Jelly Merge minigame, character profiles, and richer collection view are later milestones.
+Use **WASD or arrow keys** to walk. Press **1–4** to select a Slovak math-grade starting level. Stand near a wild Squishy and press **E**, then choose **1** for Launcher or **2** for Jelly Merge. In Jelly Merge, click over the tank to drop a numbered jelly blob; equal-value blobs merge by addition until you reach the target. **R** restarts the merge game; **Escape** returns to the map. The original Launcher game remains available. Gravity affects the trajectory; a dotted preview shows the flight path. Hit the correct target to recruit the Squishy. Escape quits the encounter. Collection and grade are saved locally in the browser. Character profiles and a richer collection view are later milestones.
 
 ## No local installation
 
@@ -25,3 +25,6 @@ Godot 4.7.2 builds in GitHub Actions through barichello/godot-ci. All you need o
 
 ## Practice mode
 Press **P** on the world map to practice either minigame at any time, even after collecting all five creatures. Choose Launcher or Jelly Merge. Practice does not alter your collection, and previously earned Squishies are preserved.
+
+## Premium production branch
+Final world direction: Jelly Fantasy / Blender-built sculpted 3D, orthographic gameplay, genuinely spring-deformable jelly characters. The 0.3 game stays playable while final-quality assets are developed and browser tested in staging. See the Premium Art Bible, Character Pipeline and Production Roadmap in `docs/`. No user workstation installation required.
