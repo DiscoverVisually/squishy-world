@@ -6,6 +6,8 @@ on:
     paths:
       - tools/blender/**
       - .github/workflows/premium-hero.yml
+      - scripts/premium/**
+      - tests/premium_spring_smoke.gd
   workflow_dispatch:
 permissions:
   contents: read
@@ -36,3 +38,18 @@ jobs:
           name: squishy-hero-blender-review
           path: production-preview/
           retention-days: 14
+
+  test-jelly-springs:
+    name: Verify Godot spring dynamics
+    runs-on: ubuntu-latest
+    container:
+      image: barichello/godot-ci:4.7.2
+    steps:
+      - uses: actions/checkout@v4
+      - name: Import premium controller scripts
+        run: |
+          godot --headless --editor --path . --quit > /tmp/import.log 2>&1
+          cat /tmp/import.log
+          if grep -Eq 'SCRIPT ERROR|Parse Error|Failed to load script' /tmp/import.log; then exit 1; fi
+      - name: Test 100 release and stretch cycles
+        run: godot --headless --path . --script res://tests/premium_spring_smoke.gd
