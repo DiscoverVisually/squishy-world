@@ -1,0 +1,6 @@
+.godot/
+.import/
+web/
+build/
+.DS_Store
+Thumbs.db

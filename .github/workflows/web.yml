@@ -1,0 +1,51 @@
+name: Build and publish Squishy World
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: squishy-world-pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Verify and export Godot 4.7.2
+    runs-on: ubuntu-latest
+    container:
+      image: barichello/godot-ci:4.7.2
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+      - name: Import project and validate scripts
+        run: godot --headless --editor --path . --quit
+      - name: Export browser game
+        run: |
+          mkdir -p web
+          godot --headless --path . --export-release Web web/index.html
+          test -s web/index.html
+          test -s web/index.wasm
+          test -s web/index.pck
+      - name: Upload Pages payload
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: web
+          retention-days: 1
+
+  deploy:
+    name: Publish to GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.pages.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: pages
+        uses: actions/deploy-pages@v4
