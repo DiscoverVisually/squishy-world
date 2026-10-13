@@ -43,3 +43,5 @@ Each ticket must pass headless import, Web export and an honest browser smoke-te
 - [x] Integrate rewards into existing collection save, preserving v0.2 progress
 - [ ] Browser playtest and refined physics balance
 - [ ] Broader mathematical exercises beyond doubling
+
+- [x] Reusable training mode with **P** on world map; collecting five Squishies no longer prevents replay.

@@ -22,3 +22,6 @@ Godot 4.7.2 builds in GitHub Actions through barichello/godot-ci. All you need o
 - `AGENTS.md` — coding conventions.
 
 **Testing:** Source is ready for cloud checks. Do not regard a deployment or 60 FPS as verified until the Actions run completes and the game loads in a real browser.
+
+## Practice mode
+Press **P** on the world map to practice either minigame at any time, even after collecting all five creatures. Choose Launcher or Jelly Merge. Practice does not alter your collection, and previously earned Squishies are preserved.

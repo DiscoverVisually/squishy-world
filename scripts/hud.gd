@@ -21,7 +21,7 @@ func _ready() -> void:
     _add_label(vbox, "SQUISHY WORLD", 28, Color("3b756a"))
     _add_label(vbox, "ŽELÉ LÚKA · PROTOTYP 0.2", 15, Color("6c8d83"))
     _add_label(vbox, "WASD / šípky · E = stretnutie", 17, Color("3e625c"))
-    _add_label(vbox, "Matematika: stlač 1, 2, 3 alebo 4", 15, Color("55786a"))
+    _add_label(vbox, "P = tréning · 1–4 = ročník", 15, Color("55786a"))
     progress_label = _add_label(vbox, "Ročník 2 · zbierka 0/5", 16, Color("476f66"))
     var bottom_panel := PanelContainer.new()
     bottom_panel.anchor_top = 1.0

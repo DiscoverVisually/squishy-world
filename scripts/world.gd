@@ -15,6 +15,7 @@ const FLOWER_COLORS: Array[Color] = [Color("fff3b0"), Color("ffc8e0"), Color("f6
 @onready var merge_arena: MergeArena = $Encounter/Merge
 @onready var choice: EncounterChoice = $Encounter/Choice
 var encounter_creature: WildSquishy = null
+var training_mode: bool = false
 var selected_grade: int = 2
 var caught_names: Array[String] = []
 var nearby_squishy: WildSquishy = null
@@ -77,6 +78,13 @@ func _unhandled_input(event: InputEvent) -> void:
         hud.set_progress(selected_grade, caught_names.size())
         _save_progress()
         get_viewport().set_input_as_handled()
+    elif event.keycode == KEY_P:
+        player.set_physics_process(false)
+        hud.visible = false
+        training_mode = true
+        encounter_creature = null
+        choice.show_choice("Tréning", Color("b8e2cf"))
+        get_viewport().set_input_as_handled()
     elif event.keycode == KEY_E and nearby_squishy != null and is_instance_valid(nearby_squishy):
         player.set_physics_process(false)
         hud.visible = false
@@ -85,6 +93,12 @@ func _unhandled_input(event: InputEvent) -> void:
         get_viewport().set_input_as_handled()
 
 func _on_choice_selected(mode: String) -> void:
+    if training_mode:
+        if mode == "merge":
+            merge_arena.start_encounter("Tréning", Color("b8e2cf"), selected_grade)
+        else:
+            arena.start_encounter("Tréning", Color("b8e2cf"), selected_grade)
+        return
     if encounter_creature == null or not is_instance_valid(encounter_creature):
         _on_encounter_cancelled()
         return
@@ -94,6 +108,10 @@ func _on_choice_selected(mode: String) -> void:
         arena.start_encounter(encounter_creature.display_name, encounter_creature.body_color, selected_grade)
 
 func _on_squishy_captured(squishy_name: String) -> void:
+    if training_mode:
+        _on_encounter_cancelled()
+        hud.set_nearby("Tréning dokončený! P = nová výzva.")
+        return
     if not caught_names.has(squishy_name):
         caught_names.append(squishy_name)
     for creature in wild_squishies.duplicate():
@@ -108,6 +126,7 @@ func _on_squishy_captured(squishy_name: String) -> void:
 
 func _on_encounter_cancelled() -> void:
     encounter_creature = null
+    training_mode = false
     player.set_physics_process(true)
     hud.visible = true
     status_clock = 0.0
