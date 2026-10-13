@@ -45,11 +45,6 @@ func _ready() -> void:
 func _process(delta: float) -> void:
     if arena.active:
         return
-    for grade_key in range(1, 5):
-        if Input.is_key_just_pressed(KEY_1 + grade_key - 1):
-            selected_grade = grade_key
-            hud.set_progress(selected_grade, caught_names.size())
-            _save_progress()
     status_clock -= delta
     if status_clock <= 0.0:
         status_clock = 0.12
@@ -62,12 +57,24 @@ func _process(delta: float) -> void:
                 nearest_distance = distance
     if nearby_squishy != null and is_instance_valid(nearby_squishy):
         hud.set_nearby("Stlač E pri %s a spusti výzvu!" % nearby_squishy.display_name)
-        if Input.is_key_just_pressed(KEY_E):
-            player.set_physics_process(false)
-            hud.visible = false
-            arena.start_encounter(nearby_squishy.display_name, nearby_squishy.body_color, selected_grade)
     else:
         hud.set_nearby("Nájdi Squishyho! Zbierka: %d/5" % caught_names.size())
+
+func _unhandled_input(event: InputEvent) -> void:
+    if arena.active or not (event is InputEventKey):
+        return
+    if not event.pressed or event.echo:
+        return
+    if event.keycode >= KEY_1 and event.keycode <= KEY_4:
+        selected_grade = int(event.keycode) - int(KEY_1) + 1
+        hud.set_progress(selected_grade, caught_names.size())
+        _save_progress()
+        get_viewport().set_input_as_handled()
+    elif event.keycode == KEY_E and nearby_squishy != null and is_instance_valid(nearby_squishy):
+        player.set_physics_process(false)
+        hud.visible = false
+        arena.start_encounter(nearby_squishy.display_name, nearby_squishy.body_color, selected_grade)
+        get_viewport().set_input_as_handled()
 
 func _on_squishy_captured(squishy_name: String) -> void:
     if not caught_names.has(squishy_name):
