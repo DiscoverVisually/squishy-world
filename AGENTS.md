@@ -1,14 +1,20 @@
-# Squishy World — AI coding rules
+# Squishy World — AI coding and production rules
 
-- Read docs/GDD.md and docs/PROTOTYPE_PLAN.md before implementing new gameplay.
-- Target Godot 4.7.2 stable, GDScript, Compatibility renderer, single-thread Web.
-- This is a 2D game with 2.5D-looking procedural art; do not convert to 3D.
-- Keep moving-player browser smoke test operational at every milestone.
-- Prefer typed GDScript, small scenes, and explicit interfaces.
-- The player uses CharacterBody2D and physics_process for movement; dynamic minigame objects should use appropriate physics objects.
-- Keep mathematical answers deterministic and validated locally, never by an LLM at runtime.
-- Separate motor difficulty from mathematical difficulty; support Slovak curricula as cycle-based skill catalog.
-- No advertisements, analytics tracking, payments, child identifying data, or account registration.
-- Document third-party assets and licenses.
-- Run Godot headless import + Web export and report actual outcomes; do not claim unrun tests passed.
-- Do not overwrite existing features or redesign unrelated systems without approval.
+## LOCKED 2026-10-13 production direction
+- Visual world: **Jelly Fantasy**, not preschool. Tactile **cartoon-premium** Squishies, **Blender-authored 3D**.
+- Gameplay stays 2.5D/top-down, but the final overworld is a real **Godot Node3D / orthographic camera** environment. This supersedes the former prohibition on 3D.
+- **No disposable user-facing art.** Produce one fully finished permanent zone before expanding. Improve lighting/shading/physics, never substitute a generic low-poly pack or primitive cylinders labeled final.
+- Read: docs/PREMIUM_ART_BIBLE_V1.md, docs/BLENDER_GODOT_CHARACTER_PIPELINE_V1.md, docs/PREMIUM_PRODUCTION_ROADMAP_V1.md.
+- Godot 4.7.2, GDScript, Compatibility WebGL2, single-thread Web export. Beauty only in Blender is insufficient; verify real Chrome browser visuals/performance.
+- Use editable .blend masters and .glb runtime assets. Blender/Godot build tools run in GitHub cloud, no user workstation installation.
+- Character gel motion must be spring-damper-driven; real tactile poking, holding, stretching and release. No expensive full volumetric soft-body mandated.
+- Preserve the working v0.3 on main while creating a separate feature/premium-3d-world staging branch. Do not prematurely replace the map.
+- Keep existing 2D minigames, encounter→reward loop, local collection saves, grade presets and practice mode across one-time world migration.
+- Do not claim FPS, web visual quality or tactile quality tested unless actually reviewed in the browser.
+
+## Engineering rules
+- Prefer typed GDScript, modular scenes, and small changes.
+- Deterministic locally verified mathematics; Slovak cycle/skill catalog plus grade presets.
+- No ads, tracking, personal identifying data, payments or compulsory accounts.
+- Audit licensing and preserve source assets.
+- Run headless import, math tests, runtime smoke check and HTML5 export for code changes. Keep existing GitHub Pages live until production quality is approved.
