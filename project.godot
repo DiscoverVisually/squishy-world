@@ -1,3 +1,5 @@
+config_version=5
+
 [application]
 config/name="Squishy World"
 run/main_scene="res://scenes/main.tscn"
