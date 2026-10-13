@@ -88,7 +88,7 @@ func _draw() -> void:
     draw_circle(Vector2.ZERO, 162.0, Color("98deda"))
     draw_circle(Vector2(-9, -8), 145.0, Color("b9f3ec"))
     draw_arc(Vector2(-22, -15), 100, 3.6, 5.45, 30, Color(1.0, 1.0, 1.0, 0.55), 5.0, true)
-    draw_set_transform()
+    draw_set_transform(Vector2.ZERO)
     var rng := RandomNumberGenerator.new()
     rng.seed = 126344
     for i in range(1250):

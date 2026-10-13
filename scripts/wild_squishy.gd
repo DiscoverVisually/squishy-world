@@ -33,4 +33,4 @@ func _draw() -> void:
         draw_circle(Vector2(x + 1, 3), 4.2, Color("354052"))
         draw_circle(Vector2(x - 1, 0), 1.7, Color.WHITE)
     draw_arc(Vector2(0, 10), 6.2, 0.2, PI - 0.2, 12, Color("745565"), 2.0, true)
-    draw_set_transform()
+    draw_set_transform(Vector2.ZERO)
