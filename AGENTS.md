@@ -18,3 +18,10 @@
 - No ads, tracking, personal identifying data, payments or compulsory accounts.
 - Audit licensing and preserve source assets.
 - Run headless import, math tests, runtime smoke check and HTML5 export for code changes. Keep existing GitHub Pages live until production quality is approved.
+
+## Budget and workstation constraints — locked 2026-10-14
+- **100% free tooling only.** No paid services, 3D-generation subscriptions, licenses, APIs, premium assets, compute, credits, or unexpected billing. Do not recommend or connect paid providers without the user's explicit reversal of this decision.
+- The user installs **nothing** locally: no Blender, Godot, Node.js, Python, or CLI. Run the art/rig/export/test pipeline in cloud GitHub Actions within its available free quotas.
+- Prefer Blender (GPL), Godot (MIT), compatible open-source tools and permissively licensed/CC0 assets. Check each model's output/commercial-use license and provenance before using it. A nominally "free trial" with paid-only exports does not qualify.
+- If a high-quality stage proves infeasible with free cloud resources, report the limitation transparently; do not silently degrade the locked art direction or substitute cheap-looking primitives.
+- A successful Blender script or morph export is not proof of final visual quality. Final hero requires approved in-browser appearance, face-deformation coherence, and physically responsive dragging/bounce, without a shipping-placeholder pass.
