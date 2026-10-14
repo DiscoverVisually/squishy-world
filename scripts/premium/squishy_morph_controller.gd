@@ -137,7 +137,7 @@ func _unhandled_input(event: InputEvent) -> void:
                 latest_mouse = pointer
                 mouse_speed_px = Vector2.ZERO
                 last_drag_time_msec = Time.get_ticks_msec()
-                grab_location = body_mesh.to_local(Vector3(hit["position"]))
+                grab_location = body_mesh.to_local(hit["position"])
                 lattice.grab(grab_location)
                 get_viewport().set_input_as_handled()
         elif is_dragging:
