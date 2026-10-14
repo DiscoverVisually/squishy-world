@@ -7,10 +7,10 @@ uniform vec3 node_rest[13];
 uniform vec3 node_shift[13];
 uniform float radius_multiplier : hint_range(0.2, 2.0) = 0.80;
 
-uniform vec4 gel_color : source_color = vec4(0.13, 0.74, 0.39, 1.0);
-uniform vec4 soft_center : source_color = vec4(0.27, 0.88, 0.50, 1.0);
-uniform vec4 gel_edge : source_color = vec4(0.05, 0.40, 0.35, 1.0);
-uniform float edge_glow : hint_range(0.0, 0.5) = 0.10;
+uniform vec4 gel_color : source_color = vec4(0.035, 0.45, 0.25, 1.0);
+uniform vec4 soft_center : source_color = vec4(0.26, 0.88, 0.39, 1.0);
+uniform vec4 gel_edge : source_color = vec4(0.035, 0.25, 0.22, 1.0);
+uniform float edge_glow : hint_range(0.0, 0.5) = 0.07;
 
 varying vec3 local_position;
 
@@ -36,15 +36,26 @@ void vertex() {
     local_position = VERTEX;
 }
 
+// Camera-independent green-depth illusion for single-threaded WebGL2.
+// True transparency/refraction would degrade both speed and face readability.
 void fragment() {
-    vec3 normal_dir = normalize(NORMAL);
-    vec3 view_dir = normalize(VIEW);
-    float rim = pow(1.0 - clamp(dot(normal_dir, view_dir), 0.0, 1.0), 3.0);
-    float translucency_illusion = smoothstep(0.4, 1.9, local_position.y);
-    vec3 base = mix(gel_color.rgb, soft_center.rgb, translucency_illusion * 0.36);
-    ALBEDO = mix(base, gel_edge.rgb, rim * 0.40);
-    ROUGHNESS = 0.20;
-    SPECULAR = 0.66;
+    vec3 n = normalize(NORMAL);
+    vec3 v = normalize(VIEW);
+    float rim = pow(1.0 - clamp(dot(n,v), 0.0, 1.0), 2.55);
+    float height_t = smoothstep(0.11, 1.83, local_position.y);
+    float crown = smoothstep(0.60, 1.0, height_t);
+    float lower_absorption = 1.0 - smoothstep(0.2, 0.82, height_t);
+    vec3 base = mix(gel_color.rgb, soft_center.rgb, height_t * 0.95);
+    base *= 1.0 - lower_absorption * 0.12;
+    // Subsurface-inspired cyan side-light and warm translucent core.
+    float glow_core = exp(-pow(local_position.x * 0.91, 2.0) / 0.68)
+                    * smoothstep(0.28, 1.08, local_position.y)
+                    * (1.0 - smoothstep(1.35, 1.90, local_position.y));
+    base += vec3(0.042, 0.12, 0.052) * glow_core;
+    float edge_mix = clamp(rim * (0.55 + 0.14 * crown), 0.0, 0.62);
+    ALBEDO = mix(base, gel_edge.rgb, edge_mix);
     METALLIC = 0.0;
-    EMISSION = gel_color.rgb * rim * edge_glow;
+    ROUGHNESS = 0.145;
+    SPECULAR = 0.89;
+    EMISSION = base * rim * edge_glow;
 }
