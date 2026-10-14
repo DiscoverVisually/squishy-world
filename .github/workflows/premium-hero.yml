@@ -7,6 +7,7 @@ on:
       - tools/blender/**
       - .github/workflows/premium-hero.yml
       - scripts/premium/**
+      - shaders/premium/**
       - tests/premium_spring_smoke.gd
   workflow_dispatch:
 permissions:
@@ -53,6 +54,8 @@ jobs:
           if grep -Eq 'SCRIPT ERROR|Parse Error|Failed to load script' /tmp/import.log; then exit 1; fi
       - name: Test 100 release and stretch cycles
         run: godot --headless --path . --script res://tests/premium_spring_smoke.gd
+      - name: Test 13-point lattice overshoot, waves, 100 repeated impacts
+        run: godot --headless --path . --script res://tests/premium_lattice_smoke.gd
 
   build-browser-lab:
     name: Export interactive 3D physics lab to WebGL2
