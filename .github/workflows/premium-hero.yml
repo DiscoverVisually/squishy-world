@@ -66,20 +66,20 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: squishy-hero-blender-review
-          path: premium-asset
+          path: /tmp/premium-asset
       - name: Stage premium model and isolated scene
         run: |
           mkdir -p assets/premium
-          cp premium-asset/hero_squishy.glb assets/premium/hero_squishy.glb
+          cp /tmp/premium-asset/hero_squishy.glb assets/premium/hero_squishy.glb
           sed -i 's@run/main_scene="res://scenes/main.tscn"@run/main_scene="res://scenes/premium/character_lab.tscn"@' project.godot
           grep -q 'scenes/premium/character_lab.tscn' project.godot
           mkdir -p "$HOME/.local/share/godot/export_templates"
           cp -a /root/.local/share/godot/export_templates/4.7.2.stable "$HOME/.local/share/godot/export_templates/"
       - name: Import Blender GLB and validate the Godot scene
         run: |
-          godot --headless --editor --path . --quit > /tmp/lab-import.log 2>&1
+          godot --headless --path . --import > /tmp/lab-import.log 2>&1
           cat /tmp/lab-import.log
-          if grep -Eq 'SCRIPT ERROR|Parse Error|Failed to load script|ERROR: Condition' /tmp/lab-import.log; then exit 1; fi
+          if grep -Eq 'SCRIPT ERROR|Parse Error|Failed to load script|ERROR: Condition|Blender path is invalid' /tmp/lab-import.log; then exit 1; fi
       - name: Start premium physics scene headlessly
         run: |
           godot --headless --path . --quit-after 15 > /tmp/lab-runtime.log 2>&1
