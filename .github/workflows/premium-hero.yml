@@ -53,3 +53,48 @@ jobs:
           if grep -Eq 'SCRIPT ERROR|Parse Error|Failed to load script' /tmp/import.log; then exit 1; fi
       - name: Test 100 release and stretch cycles
         run: godot --headless --path . --script res://tests/premium_spring_smoke.gd
+
+  build-browser-lab:
+    name: Export interactive 3D physics lab to WebGL2
+    needs: [build-asset, test-jelly-springs]
+    runs-on: ubuntu-latest
+    container:
+      image: barichello/godot-ci:4.7.2
+    steps:
+      - uses: actions/checkout@v4
+      - name: Load exported Blender 3D model
+        uses: actions/download-artifact@v4
+        with:
+          name: squishy-hero-blender-review
+          path: premium-asset
+      - name: Stage premium model and isolated scene
+        run: |
+          mkdir -p assets/premium
+          cp premium-asset/hero_squishy.glb assets/premium/hero_squishy.glb
+          sed -i 's@run/main_scene="res://scenes/main.tscn"@run/main_scene="res://scenes/premium/character_lab.tscn"@' project.godot
+          grep -q 'scenes/premium/character_lab.tscn' project.godot
+          mkdir -p "$HOME/.local/share/godot/export_templates"
+          cp -a /root/.local/share/godot/export_templates/4.7.2.stable "$HOME/.local/share/godot/export_templates/"
+      - name: Import Blender GLB and validate the Godot scene
+        run: |
+          godot --headless --editor --path . --quit > /tmp/lab-import.log 2>&1
+          cat /tmp/lab-import.log
+          if grep -Eq 'SCRIPT ERROR|Parse Error|Failed to load script|ERROR: Condition' /tmp/lab-import.log; then exit 1; fi
+      - name: Start premium physics scene headlessly
+        run: |
+          godot --headless --path . --quit-after 15 > /tmp/lab-runtime.log 2>&1
+          cat /tmp/lab-runtime.log
+          if grep -Eq 'SCRIPT ERROR|Parse Error|Invalid call|Premium hero glb missing|SquishyBody not found' /tmp/lab-runtime.log; then exit 1; fi
+      - name: Export standalone character lab WebAssembly
+        run: |
+          mkdir -p premium-web
+          godot --headless --path . --export-release Web premium-web/index.html
+          test -s premium-web/index.html
+          test -s premium-web/index.wasm
+          test -s premium-web/index.pck
+      - name: Upload browser testing build without publishing production
+        uses: actions/upload-artifact@v4
+        with:
+          name: premium-3d-browser-lab
+          path: premium-web/
+          retention-days: 14
