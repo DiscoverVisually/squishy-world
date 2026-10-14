@@ -4,9 +4,13 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+  workflow_run:
+    workflows: [Blender Premium Hero Review]
+    types: [completed]
 
 permissions:
   contents: read
+  actions: read
   pages: write
   id-token: write
 
@@ -16,13 +20,16 @@ concurrency:
 
 jobs:
   build:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     name: Verify and export Godot 4.7.2
     runs-on: ubuntu-latest
     container:
       image: barichello/godot-ci:4.7.2
     steps:
-      - name: Checkout source
+      - name: Checkout published game source (always main)
         uses: actions/checkout@v4
+        with:
+          ref: main
       - name: Prepare Godot Web export templates
         run: |
           mkdir -p "$HOME/.local/share/godot/export_templates"
@@ -55,6 +62,21 @@ jobs:
           test -s web/index.html
           test -s web/index.wasm
           test -s web/index.pck
+      - name: Attach isolated premium physics preview (not final art)
+        if: github.event_name == 'workflow_run' && github.event.workflow_run.head_branch == 'feature/premium-3d-world'
+        uses: actions/download-artifact@v4
+        with:
+          repository: DiscoverVisually/squishy-world
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          name: premium-3d-browser-lab
+          path: web/premium
+      - name: Verify preview bundling
+        if: github.event_name == 'workflow_run' && github.event.workflow_run.head_branch == 'feature/premium-3d-world'
+        run: |
+          test -s web/premium/index.html
+          test -s web/premium/index.wasm
+          test -s web/premium/index.pck
       - name: Upload Pages payload
         uses: actions/upload-pages-artifact@v4
         with:
