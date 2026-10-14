@@ -121,6 +121,30 @@ for v in body.data.vertices:
     v.co=(ox,oy,oz)
     base.append(v.co.copy())
 
+# Production silhouette is a single watertight gel volume; not separate
+# toy spheres. Fuse original body, asymmetric side fins and pliable paws.
+# Do this BEFORE shape keys: all body parts then share the same spring-driven skin.
+fusion_parts=[body]
+for side,tag in [(-1,"L"),(1,"R")]:
+    fin=sphere("Temp_Fin_"+tag,(side*.83,-.12,.59),(.262,.31,.255),gel,48,32)
+    fin.rotation_euler[1]=side*.19
+    paw=sphere("Temp_Paw_"+tag,(side*.47,-.29,.24),(.308,.350,.180),gel,56,32)
+    paw.rotation_euler[1]=side*.045
+    fusion_parts.extend([fin,paw])
+bpy.ops.object.select_all(action="DESELECT")
+for part in fusion_parts: part.select_set(True)
+bpy.context.view_layer.objects.active=body
+bpy.ops.object.join()
+body.name="SquishyBody"
+body.data.remesh_voxel_size=.042
+bpy.ops.object.voxel_remesh()
+smoother=body.modifiers.new("OrganicVolumeSmooth","SMOOTH")
+smoother.factor=1.08
+smoother.iterations=4
+bpy.ops.object.modifier_apply(modifier=smoother.name)
+for polygon in body.data.polygons:polygon.use_smooth=True
+base=[v.co.copy() for v in body.data.vertices]
+assert len(base) >= 3500, "Merged body mesh resolution too low"
 body.shape_key_add(name="Basis",from_mix=False)
 def deform(name,fn):
     b=body.shape_key_add(name=name,from_mix=False)
@@ -142,14 +166,6 @@ crown=[
 for i,(x,y,z,scale,turn) in enumerate(crown):
     o=sphere("CrownSoftBud_"+str(i),(x,y,z),scale,tip,48,32)
     o.rotation_euler[1]=turn
-
-# Distinctive short, squishable side fins and low gel paws; overlap is large,
-# so the silhouette reads as a single soft creature, not four toy cylinders.
-for side,tag in [(-1,"L"),(1,"R")]:
-    fin=sphere("GelFin_"+tag,(side*.82,-.12,.62),(.248,.27,.229),gel,80,48)
-    fin.rotation_euler[1]=side*.22
-    foot=sphere("GelFoot_"+tag,(side*.49,-.28,.22),(.285,.324,.160),gel,80,48)
-    foot.rotation_euler[1]=side*.07
 
 # Contoured face components: much thinner in depth than former sphere patches.
 # Each part keeps a named identity for the Godot face deformation rig.
