@@ -6,7 +6,11 @@ const HERO_PATH: String = "res://assets/premium/hero_squishy.glb"
 const DEFORMER = preload("res://scripts/premium/squishy_morph_controller.gd")
 var camera: Camera3D
 var hero: Node3D
+var actor: Node3D
 var driver: Node3D
+var walk_velocity: Vector3 = Vector3.ZERO
+var jump_velocity: float = 0.0
+var walk_time: float = 0.0
 var hint: Label
 var info: Label
 var orbit_yaw: float = 18.0
@@ -90,6 +94,9 @@ func _update_camera() -> void:
     var yaw: float = deg_to_rad(orbit_yaw)
     var pitch: float = deg_to_rad(orbit_pitch)
     var target := Vector3(0.0, 0.88, 0.0)
+    if actor != null:
+        target.x += actor.position.x
+        target.z += actor.position.z
     var offset := Vector3(sin(yaw) * cos(pitch), sin(pitch), cos(yaw) * cos(pitch)) * 6.0
     camera.position = target + offset
     camera.look_at(target, Vector3.UP)
@@ -100,9 +107,12 @@ func _load_hero() -> void:
     if not (packed is PackedScene):
         push_error("Premium hero glb missing or invalid: " + HERO_PATH)
         return
+    actor = Node3D.new()
+    actor.name = "PlayableJellyActor"
+    add_child(actor)
     hero = (packed as PackedScene).instantiate()
     hero.name = "PremiumHeroCandidate"
-    add_child(hero)
+    actor.add_child(hero)
     var meshes: Array[Node] = hero.find_children("*", "MeshInstance3D", true, false)
     var body: MeshInstance3D = null
     for node in meshes:
@@ -120,14 +130,14 @@ func _load_hero() -> void:
     shape.shape = sphere
     shape.position = Vector3(0, 0.92, 0)
     hit_body.add_child(shape)
-    add_child(hit_body)
+    actor.add_child(hit_body)
     driver = DEFORMER.new()
     driver.name = "JellyMorphController"
     driver.body_mesh = body
     driver.input_camera = camera
     driver.character_collider = hit_body
     driver.face_root = hero
-    add_child(driver)
+    actor.add_child(driver)
 
 func _make_hud() -> void:
     var layer := CanvasLayer.new()
@@ -156,12 +166,12 @@ func _make_hud() -> void:
     title.add_theme_color_override("font_color", Color("#e8faf5"))
     stack.add_child(title)
     hint = Label.new()
-    hint.text = "Ľavé tlačidlo: chyť a natiahni · klik: šťuchni"
+    hint.text = "Ľavé tlačidlo: natiahni a PUSŤ · klik: šťuchni"
     hint.add_theme_font_size_override("font_size", 17)
     hint.add_theme_color_override("font_color", Color("#bfdcd5"))
     stack.add_child(hint)
     var text2 := Label.new()
-    text2.text = "Pravé tlačidlo: otáčaj · koliesko: zoom · SPACE: odraz"
+    text2.text = "WASD: choď · SPACE: skoč · pravé tlačidlo: kamera"
     text2.add_theme_font_size_override("font_size", 16)
     text2.add_theme_color_override("font_color", Color("#bfdcd5"))
     stack.add_child(text2)
@@ -184,27 +194,55 @@ func _make_hud() -> void:
     footer.add_theme_font_size_override("font_size", 17)
     root.add_child(footer)
 
+func _physics_process(delta: float) -> void:
+    if actor == null:
+        return
+    var direction2d := Vector2.ZERO
+    if Input.is_key_pressed(KEY_A) or Input.is_key_pressed(KEY_LEFT):
+        direction2d.x -= 1.0
+    if Input.is_key_pressed(KEY_D) or Input.is_key_pressed(KEY_RIGHT):
+        direction2d.x += 1.0
+    if Input.is_key_pressed(KEY_W) or Input.is_key_pressed(KEY_UP):
+        direction2d.y -= 1.0
+    if Input.is_key_pressed(KEY_S) or Input.is_key_pressed(KEY_DOWN):
+        direction2d.y += 1.0
+    var horizontal: Vector3 = camera.global_transform.basis.x
+    var forward: Vector3 = -camera.global_transform.basis.z
+    horizontal.y = 0.0
+    forward.y = 0.0
+    horizontal = horizontal.normalized()
+    forward = forward.normalized()
+    var desired: Vector3 = (horizontal * direction2d.x - forward * direction2d.y).normalized() * 1.38
+    var before: Vector3 = walk_velocity
+    walk_velocity = walk_velocity.move_toward(desired, 5.2 * delta)
+    actor.position.x = clampf(actor.position.x + walk_velocity.x * delta, -1.15, 1.15)
+    actor.position.z = clampf(actor.position.z + walk_velocity.z * delta, -1.15, 1.15)
+    if bouncing:
+        jump_velocity -= 13.4 * delta
+        actor.position.y += jump_velocity * delta
+        if actor.position.y <= 0.0 and jump_velocity < 0.0:
+            actor.position.y = 0.0
+            bouncing = false
+            if driver != null:
+                driver.impact(absf(jump_velocity) * 1.7)
+            jump_velocity = 0.0
+    if driver != null:
+        var relative_acc: Vector3 = before - walk_velocity
+        var turning: float = before.cross(walk_velocity).y
+        driver.movement(relative_acc, walk_velocity.length(), turning)
+    _update_camera()
+
 func _process(delta: float) -> void:
     lab_clock += delta
-    if hero == null:
-        return
-    if bouncing:
-        jump_time += delta
-        var t: float = clampf(jump_time / 0.82, 0.0, 1.0)
-        var arc: float = 2.2 * sin(t * PI)
-        hero.position.y = hero_base_y + maxf(0.0, arc)
-        if t >= 1.0:
-            bouncing = false
-            hero.position.y = hero_base_y
-            if driver != null:
-                driver.impact(7.0)
     if info != null and driver != null:
-        info.text = "Stlač SPACE · " + ("Naťahuješ Squishyho" if driver.is_dragging else "Pružné želé aktívne")
+        info.text = ("Naťahuješ želé" if driver.is_dragging else "Pružinový wobble: %.2f m" % driver.wobble_amount()) + "  |  Physics 2.0"
 
 func _unhandled_input(event: InputEvent) -> void:
     if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_SPACE and not bouncing:
         bouncing = true
-        jump_time = 0.0
+        jump_velocity = 4.7
+        if driver != null:
+            driver.celebrate()
         get_viewport().set_input_as_handled()
     if event is InputEventMouseButton:
         if event.button_index == MOUSE_BUTTON_RIGHT:
