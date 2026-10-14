@@ -14,7 +14,7 @@ var velocities: PackedVector3Array = PackedVector3Array()
 var links: Array[PackedInt32Array] = []
 var held_index: int = -1
 var held_target: Vector3 = Vector3.ZERO
-var held_strength: float = 28.0
+var held_strength: float = 280.0
 var last_applied_step: float = 0.0
 
 func _init() -> void:
