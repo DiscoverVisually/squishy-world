@@ -1,118 +1,188 @@
 extends Node3D
-## Reusable visual controller for original Blender .glb morph targets.
-## Attach under CharacterBody3D; no collisions changed by visual stretching.
+## Jelly Physics 2.0: coupled local springs + GPU surface field + Blender morphs.
+## Stable physics collider does not deform; face follows the same lattice field.
 const Spring = preload("res://scripts/premium/jelly_spring.gd")
+const Lattice = preload("res://scripts/premium/jelly_lattice.gd")
+const JELLY_SHADER: Shader = preload("res://shaders/premium/jelly_skin.gdshader")
+
 @export var body_mesh: MeshInstance3D
 @export var input_camera: Camera3D
 @export var character_collider: CollisionObject3D
 @export var face_root: Node3D
-var attached_parts: Array[Node3D] = []
-var attached_rest_positions: Array[Vector3] = []
-@export var drag_sensitivity: float = 0.0035
 
+var lattice = Lattice.new()
 var channels: Dictionary = {}
 var morph_indices: Dictionary = {}
+var skin_material: ShaderMaterial = null
+var attached_parts: Array[Node3D] = []
+var attached_rest_positions: Array[Vector3] = []
+
 var is_dragging: bool = false
+var grab_location: Vector3 = Vector3.ZERO
 var drag_origin: Vector2 = Vector2.ZERO
 var latest_mouse: Vector2 = Vector2.ZERO
-var drag_seconds: float = 0.0
+var last_drag_time_msec: int = 0
+var mouse_speed_px: Vector2 = Vector2.ZERO
+var grab_seconds: float = 0.0
+var walk_time: float = 0.0
+var idle_time: float = 0.0
 
 func _ready() -> void:
     for name in ["Squash", "StretchUp", "LeanLeft", "LeanRight", "Impact", "PokeFront", "HappyWiggle"]:
         var spring = Spring.new()
-        spring.configure(90.0, 15.0)
+        spring.configure(42.0, 8.0)
         channels[name] = spring
+    channels["Impact"].configure(58.0, 8.0)
+    channels["PokeFront"].configure(68.0, 9.0)
     if body_mesh == null or body_mesh.mesh == null:
-        push_warning("Assign a Blender character Body mesh; no deformable mesh is loaded yet")
+        push_error("Premium body mesh is required for Jelly Physics 2.0")
         return
     for i in range(body_mesh.mesh.get_blend_shape_count()):
         morph_indices[String(body_mesh.mesh.get_blend_shape_name(i))] = i
-    for required in channels.keys():
-        if not morph_indices.has(required):
-            push_warning("Missing Blender morph channel: " + String(required))
+    skin_material = ShaderMaterial.new()
+    skin_material.shader = JELLY_SHADER
+    skin_material.set_shader_parameter("node_rest", lattice.anchors)
+    skin_material.set_shader_parameter("node_shift", lattice.offsets)
+    body_mesh.set_surface_override_material(0, skin_material)
     if face_root != null:
         var meshes: Array[Node] = face_root.find_children("*", "MeshInstance3D", true, false)
-        for obj in meshes:
-            var part := obj as MeshInstance3D
+        for node in meshes:
+            var part := node as MeshInstance3D
             if part == body_mesh:
                 continue
             attached_parts.append(part)
             attached_rest_positions.append(part.position)
+    print("Jelly Physics 2.0 READY: %d spring points, %d facial/appendage parts" % [
+        lattice.anchors.size(), attached_parts.size()])
 
 func _physics_process(delta: float) -> void:
+    idle_time += delta
     if is_dragging:
-        drag_seconds += delta
-        var pull: Vector2 = (latest_mouse - drag_origin) * drag_sensitivity
-        channels["StretchUp"].target = clampf(-pull.y, 0.0, 1.0)
-        channels["LeanLeft"].target = clampf(-pull.x, 0.0, 1.0)
-        channels["LeanRight"].target = clampf(pull.x, 0.0, 1.0)
-    else:
-        channels["StretchUp"].target = 0.0
-        channels["LeanLeft"].target = 0.0
-        channels["LeanRight"].target = 0.0
+        grab_seconds += delta
+        lattice.drag(_screen_to_local(latest_mouse - drag_origin))
+    lattice.step(delta)
+    _update_global_morphs(delta)
+    _update_attached_face()
+    if skin_material != null:
+        skin_material.set_shader_parameter("node_shift", lattice.offsets)
+
+func _screen_to_local(screen_delta: Vector2) -> Vector3:
+    if input_camera == null or body_mesh == null:
+        return Vector3.ZERO
+    var world_per_px: float = input_camera.size / maxf(1.0, float(get_viewport().get_visible_rect().size.y))
+    var world_delta: Vector3 = (input_camera.global_transform.basis.x * screen_delta.x -
+        input_camera.global_transform.basis.y * screen_delta.y) * world_per_px
+    var local_delta: Vector3 = body_mesh.global_transform.basis.inverse() * world_delta
+    return local_delta.limit_length(0.61)
+
+func _update_global_morphs(delta: float) -> void:
+    var upper: Vector3 = Vector3.ZERO
+    for i in range(1, 5):
+        upper += lattice.offsets[i] * 0.25
+    var lower: Vector3 = Vector3.ZERO
+    for i in range(9, 13):
+        lower += lattice.offsets[i] * 0.25
+    channels["StretchUp"].target = clampf((upper.y - lower.y) * 0.37, 0.0, 0.28)
+    channels["Squash"].target = clampf((lower.y - upper.y) * 0.52, 0.0, 0.35)
+    channels["LeanLeft"].target = clampf(-upper.x * 0.22, 0.0, 0.22)
+    channels["LeanRight"].target = clampf(upper.x * 0.22, 0.0, 0.22)
     for name in channels:
         var spring = channels[name]
         var weight: float = spring.step(delta)
         if body_mesh != null and morph_indices.has(name):
-            body_mesh.set_blend_shape_value(int(morph_indices[name]), weight)
-    _update_attached_face()
+            body_mesh.set_blend_shape_value(int(morph_indices[name]), clampf(weight, 0.0, 0.5))
+
+func _displacement_at(local_pos: Vector3) -> Vector3:
+    var d: Vector3 = Vector3.ZERO
+    var total: float = 0.0
+    for i in range(lattice.anchors.size()):
+        var distance_sq: float = local_pos.distance_squared_to(lattice.anchors[i])
+        var w: float = exp(-distance_sq / (2.0 * 0.80 * 0.80))
+        d += lattice.offsets[i] * w
+        total += w
+    return d / maxf(0.7, total * 0.78)
 
 func _update_attached_face() -> void:
-    var stretch: float = float(channels["StretchUp"].value)
     var squash: float = float(channels["Squash"].value)
-    var left: float = float(channels["LeanLeft"].value)
-    var right: float = float(channels["LeanRight"].value)
+    var stretch: float = float(channels["StretchUp"].value)
     var impact_weight: float = float(channels["Impact"].value)
-    var poke: float = float(channels["PokeFront"].value)
-    var vertical_factor: float = 1.0 + 0.26 * stretch - 0.22 * squash - 0.18 * impact_weight
-    var horizontal_factor: float = 1.0 - 0.14 * stretch + 0.16 * squash + 0.11 * impact_weight
-    var lateral_offset: float = (right - left) * 0.17
+    var vertical: float = 1.0 + 0.26 * stretch - 0.22 * squash - 0.16 * impact_weight
+    var radial: float = clampf(1.0 - stretch * 0.22 + squash * 0.18, 0.81, 1.22)
     for i in range(attached_parts.size()):
         var part: Node3D = attached_parts[i]
         if not is_instance_valid(part):
             continue
-        var orig: Vector3 = attached_rest_positions[i]
-        var p: Vector3 = orig
-        p.x = orig.x * horizontal_factor + lateral_offset * clampf(orig.y * 0.65, 0.0, 1.0)
-        p.y = 0.12 + (orig.y - 0.12) * vertical_factor
-        p.z = orig.z * (1.0 + 0.11 * squash - 0.12 * stretch)
-        if part.name.begins_with("Eye") or part.name.begins_with("Iris") or part.name.begins_with("Pupil") or part.name.begins_with("Catchlight") or part.name == "Mouth" or part.name == "Tongue":
-            p.z += 0.08 * poke
-        part.position = p
+        var original: Vector3 = attached_rest_positions[i]
+        var shifted: Vector3 = original
+        shifted.y = 0.12 + (original.y - 0.12) * vertical
+        shifted.x *= radial
+        shifted.z *= radial
+        shifted += _displacement_at(original)
+        part.position = shifted
 
 func _unhandled_input(event: InputEvent) -> void:
-    if input_camera == null or character_collider == null:
+    if input_camera == null or character_collider == null or body_mesh == null:
         return
     if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
         var pointer: Vector2 = event.position
         if event.pressed:
-            var from: Vector3 = input_camera.project_ray_origin(pointer)
-            var direction: Vector3 = input_camera.project_ray_normal(pointer)
-            var query: PhysicsRayQueryParameters3D = PhysicsRayQueryParameters3D.create(from, from + direction * 100.0)
+            var origin: Vector3 = input_camera.project_ray_origin(pointer)
+            var normal: Vector3 = input_camera.project_ray_normal(pointer)
+            var query: PhysicsRayQueryParameters3D = PhysicsRayQueryParameters3D.create(origin, origin + normal * 100.0)
             var hit: Dictionary = get_world_3d().direct_space_state.intersect_ray(query)
             if hit.get("collider") == character_collider:
                 is_dragging = true
-                drag_seconds = 0.0
+                grab_seconds = 0.0
                 drag_origin = pointer
                 latest_mouse = pointer
+                mouse_speed_px = Vector2.ZERO
+                last_drag_time_msec = Time.get_ticks_msec()
+                grab_location = body_mesh.to_local(Vector3(hit["position"]))
+                lattice.grab(grab_location)
                 get_viewport().set_input_as_handled()
         elif is_dragging:
+            var screen_displacement: Vector2 = latest_mouse - drag_origin
             is_dragging = false
-            if drag_seconds < 0.22 and latest_mouse.distance_to(drag_origin) < 14.0:
-                channels["PokeFront"].push(6.0)
-                channels["Squash"].push(2.0)
+            if screen_displacement.length() < 11.0 and grab_seconds < 0.28:
+                lattice.release(Vector3.ZERO)
+                lattice.disturb(grab_location, -_surface_normal(grab_location) * 5.5, 0.39)
+                channels["PokeFront"].push(1.5)
             else:
-                channels["StretchUp"].push(5.0)
-                channels["LeanLeft"].push(3.0)
-                channels["LeanRight"].push(3.0)
+                var delta_local: Vector3 = _screen_to_local(mouse_speed_px * 0.23)
+                lattice.release(delta_local * 6.0)
+                if screen_displacement.length() > 90.0:
+                    channels["HappyWiggle"].push(0.8)
             get_viewport().set_input_as_handled()
     elif event is InputEventMouseMotion and is_dragging:
+        var now: int = Time.get_ticks_msec()
+        var ms: float = maxf(8.0, float(now - last_drag_time_msec))
+        var inst_speed: Vector2 = event.relative * (16.667 / ms)
+        mouse_speed_px = mouse_speed_px.lerp(inst_speed, 0.55)
+        last_drag_time_msec = now
         latest_mouse = event.position
         get_viewport().set_input_as_handled()
 
+func _surface_normal(local_pos: Vector3) -> Vector3:
+    var normal: Vector3 = local_pos - Vector3(0.0, 0.87, 0.0)
+    if normal.length_squared() < 0.001:
+        return Vector3(0.0, 0.0, 1.0)
+    return normal.normalized()
+
 func impact(strength: float) -> void:
-    channels["Impact"].push(clampf(strength, 0.0, 10.0))
-    channels["Squash"].push(clampf(strength * 0.5, 0.0, 5.0))
+    lattice.impact(strength)
+    channels["Impact"].push(clampf(strength * 0.22, 0.0, 2.5))
+    channels["Squash"].push(clampf(strength * 0.13, 0.0, 1.3))
+
+func movement(acceleration: Vector3, speed: float, turning: float) -> void:
+    lattice.movement(acceleration, speed, turning)
+    if speed > 0.1:
+        walk_time += 0.06 * speed
+        if sin(walk_time * 6.0) > 0.94:
+            lattice.disturb(Vector3(0, 0.45, 0), Vector3(0, 1.0, 0), 0.85)
 
 func celebrate() -> void:
-    channels["HappyWiggle"].push(4.0)
+    lattice.disturb(Vector3(0.0, 1.25, 0.0), Vector3(0, 2.8, 0), 1.0)
+    channels["HappyWiggle"].push(1.0)
+
+func wobble_amount() -> float:
+    return lattice.max_displacement()
