@@ -110,11 +110,11 @@ for v in body.data.vertices:
     oz+=.013*sin(6*x+2.1*y)*(1.0-abs(z))
     # Recessed eyelid sockets are actual deformations in the jelly shell.
     for sx in (-1.0,1.0):
-        oy+=.065*gauss((ox-sx*.345),oz-1.17,.27)*maxf(0.0,-y)
+        oy+=.065*gauss((ox-sx*.345),oz-1.17,.27)*max(0.0,-y)
         # Soft hand-like protrusions are part of the SAME watertight body.
-        ox+=sx*.17*gauss(ox-sx*.74,oz-.60,.28)*maxf(0.0,abs(x))
+        ox+=sx*.17*gauss(ox-sx*.74,oz-.60,.28)*max(0.0,abs(x))
         # Broad gel feet grow from bottom shell; no detached shoe outlines.
-        feet=gauss(ox-sx*.42,oz-.26,.31)*maxf(0.0,-y)
+        feet=gauss(ox-sx*.42,oz-.26,.31)*max(0.0,-y)
         oy-=.10*feet
         oz-=.055*feet
     if oz<.13: oz=.13+(oz-.13)*.12
@@ -207,7 +207,7 @@ for p in plinth.data.polygons:p.use_smooth=True
 scene=bpy.context.scene
 scene.render.engine="CYCLES"
 scene.cycles.samples=32
-scene.cycles.use_denoising=True
+bpy.context.view_layer.cycles.use_denoising=True
 scene.render.resolution_x=800
 scene.render.resolution_y=800
 scene.render.resolution_percentage=100
