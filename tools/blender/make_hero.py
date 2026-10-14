@@ -34,7 +34,7 @@ def material(name,color,rough=.21,coat=.30,subs=.0,metal=.0):
     bs.inputs["Metallic"].default_value=metal
     return m
 
-gel=material("GEL_Jade_WebCompatible",(.055,.62,.20),.13,.62,.30)
+gel=material("GEL_Jade_WebCompatible",(.065,.65,.24),.19,.44,.34)
 tip=material("GEL_LuminousSprouts",(.13,.75,.31),.14,.50,.22)
 dark=material("EYE_DeepChocolate",(.018,.016,.021),.12,.4)
 whites=material("EYE_Ivory",(.97,.98,.96),.19,.28)
@@ -63,11 +63,11 @@ def ramp_color(pos,col):
     e=ramp.color_ramp.elements.new(pos)
     e.color=(*col,1)
 ramp.color_ramp.elements[0].position=0.0
-ramp.color_ramp.elements[0].color=(.016,.18,.10,1)
-ramp_color(.27,(.035,.34,.12))
-ramp_color(.61,(.055,.60,.20))
-ramp_color(.86,(.21,.77,.31))
-ramp_color(1.0,(.40,.89,.49))
+ramp.color_ramp.elements[0].color=(.035,.29,.14,1)
+ramp_color(.27,(.060,.41,.16))
+ramp_color(.61,(.095,.64,.23))
+ramp_color(.86,(.23,.81,.35))
+ramp_color(1.0,(.44,.90,.49))
 links.new(sep.outputs["Z"],ramp.inputs[0])
 links.new(ramp.outputs[0],bs.inputs["Base Color"])
 noise=nodes.new("ShaderNodeTexNoise")
@@ -167,25 +167,70 @@ for i,(x,y,z,scale,turn) in enumerate(crown):
     o=sphere("CrownSoftBud_"+str(i),(x,y,z),scale,tip,48,32)
     o.rotation_euler[1]=turn
 
-# Contoured face components: much thinner in depth than former sphere patches.
-# Each part keeps a named identity for the Godot face deformation rig.
+# Production facial patches conform to the actual curved gel silhouette.
+# Unlike flattened ellipsoid decals, thin patches are integrated into the shell.
+# Each maintains its own object transform for coherent Godot lattice attachment.
+def shell_front_y(x,z):
+    shape_h=(z-.94)/.84
+    relative_width=.99*(1.0-.095*min(1.0,max(0.0,(z-.10)/1.7)))
+    r2=(x/max(.15,relative_width))**2 + shape_h**2
+    return -.88*sqrt(max(.03,1.0-r2))
+
+def oval_patch(name,cx,cz,rx,rz,mat,depth,segments=64,rings=9,smile=False):
+    cy=shell_front_y(cx,cz)-depth
+    coords=[(0.0,0.0,0.0)]
+    faces=[]
+    for ring in range(1,rings+1):
+        fraction=ring/float(rings)
+        for j in range(segments):
+            ang=2*pi*j/float(segments)
+            x=cx+rx*fraction*cos(ang)
+            z=cz+rz*fraction*sin(ang)
+            if smile:
+                z+=.024*(fraction*abs(cos(ang)))**2
+            y=shell_front_y(x,z)-depth
+            coords.append((x-cx,y-cy,z-cz))
+    for j in range(segments):
+        faces.append((0,1+j,1+(j+1)%segments))
+    for ring in range(1,rings):
+        inside=1+(ring-1)*segments
+        outside=1+ring*segments
+        for j in range(segments):
+            jj=(j+1)%segments
+            faces.append((inside+j,outside+j,outside+jj))
+            faces.append((inside+j,outside+jj,inside+jj))
+    mesh=bpy.data.meshes.new(name+"_Shape")
+    mesh.from_pydata(coords,[],faces)
+    mesh.update()
+    obj=bpy.data.objects.new(name,mesh)
+    collection.objects.link(obj)
+    obj.location=(cx,cy,cz)
+    mesh.materials.append(mat)
+    for poly in mesh.polygons:poly.use_smooth=True
+    return obj
+
 for side,tag in [(-1,"L"),(1,"R")]:
     cx=side*.345
-    sphere("EyeRoot_"+tag,(cx,-.765,1.175),(.246,.028,.298),gel,60,40)
-    sphere("EyeRim_"+tag,(cx,-.777,1.173),(.236,.022,.288),dark,64,44)
-    sphere("EyeIvory_"+tag,(cx,-.793,1.174),(.223,.017,.270),whites,64,44)
-    sphere("Iris_"+tag,(cx-side*.026,-.810,1.159),(.183,.015,.213),honey,64,44)
-    sphere("IrisLight_"+tag,(cx-side*.029,-.827,1.161),(.151,.013,.180),inner_honey,60,44)
-    sphere("Pupil_"+tag,(cx-side*.031,-.843,1.163),(.146,.012,.183),pupil,64,44)
-    sphere("Catchlight_"+tag,(cx-side*.031-.063,-.859,1.239),(.056,.008,.063),glint,40,28)
-    sphere("MicroGlint_"+tag,(cx-side*.031+.075,-.861,1.095),(.017,.006,.023),glint,28,20)
-    sphere("Cheek_"+tag,(side*.67,-.685,.83),(.126,.009,.058),cheeks,64,32)
+    cz=1.165
+    oval_patch("EyeRoot_"+tag,cx,cz,.251,.296,gel,.006)
+    oval_patch("EyeRim_"+tag,cx,cz,.234,.281,dark,.021)
+    oval_patch("EyeIvory_"+tag,cx,cz,.219,.266,whites,.026)
+    oval_patch("Iris_"+tag,cx-side*.029,cz-.012,.185,.215,honey,.037)
+    oval_patch("IrisLight_"+tag,cx-side*.030,cz-.013,.157,.187,inner_honey,.043)
+    oval_patch("Pupil_"+tag,cx-side*.032,cz-.010,.150,.186,pupil,.052)
+    gx=cx-side*.032-.071
+    gz=1.236
+    sphere("Catchlight_"+tag,(gx,shell_front_y(gx,gz)-.073,gz),(.050,.012,.062),glint,32,20)
+    sx=cx-side*.032+.080
+    sz=1.096
+    sphere("MicroGlint_"+tag,(sx,shell_front_y(sx,sz)-.073,sz),(.020,.008,.026),glint,24,16)
+    oval_patch("Cheek_"+tag,side*.670,.831,.127,.069,cheeks,.015,48,6)
 
-# Joyful mouth with a dark inside and a bright raised tongue.
-smile=sphere("Mouth",(0,-.828,.685),(.226,.019,.143),mouth,80,48)
-sphere("Tongue",(0,-.846,.616),(.116,.012,.044),tongue,52,36)
-# Subtle glossy lower-lip high point, visually continuous with gel.
-sphere("MouthLip",(0,-.799,.547),(.128,.007,.016),tip,48,24)
+# Mouth has a smiling upper arc and sits flush on the lower cheek.
+oval_patch("Mouth",0.0,.676,.230,.133,mouth,.031,72,11,True)
+oval_patch("Tongue",0.0,.606,.120,.047,tongue,.051,48,7,True)
+# Bright gel lower-lip ridge is extremely shallow and blends with the body.
+oval_patch("MouthLip",0.0,.546,.123,.018,tip,.013,48,5)
 
 # Sculpt quality check and directly editable master.
 bpy.ops.object.select_all(action="DESELECT")
@@ -211,9 +256,9 @@ look_at(cam,(0,0,.95))
 bpy.context.scene.camera=cam
 
 for n,power,size,color,loc in [
-("Key",330,4.5,(1,.93,.81),(-2.6,-3.3,4.5)),
-("CoolRim",420,3.0,(.48,.88,1),(2.7,2.4,3.2)),
-("Fill",160,3.0,(1,.75,.72),(3.0,-2.1,1.8))]:
+("Key",280,4.5,(1,.93,.81),(-2.6,-3.3,4.5)),
+("CoolRim",360,3.0,(.48,.88,1),(2.7,2.4,3.2)),
+("Fill",140,3.0,(1,.75,.72),(3.0,-2.1,1.8))]:
     bpy.ops.object.light_add(type="AREA",location=loc)
     light=bpy.context.object
     light.name=n
