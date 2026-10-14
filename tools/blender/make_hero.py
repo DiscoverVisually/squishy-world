@@ -42,7 +42,7 @@ honey=material("EYE_AmberRing",(.56,.29,.095),.17,.4)
 inner_honey=material("EYE_IrisGold",(.92,.54,.15),.21,.3)
 pupil=material("EYE_GlassPupil",(.009,.014,.020),.085,.78)
 glint=material("EYE_WhiteSoftbox",(1.0,1.0,1.0),.08,.25)
-cheeks=material("CHEEK_CoralBlush",(.92,.43,.44),.39,.12,.14)
+cheeks=material("CHEEK_CoralBlush",(.85,.34,.39),.40,.16,.12)
 mouth=material("MOUTH_RaspberryShadow",(.17,.028,.060),.36,.15)
 tongue=material("MOUTH_Rose",(.97,.30,.39),.32,.22)
 
@@ -224,7 +224,7 @@ for side,tag in [(-1,"L"),(1,"R")]:
     sx=cx-side*.032+.080
     sz=1.096
     sphere("MicroGlint_"+tag,(sx,shell_front_y(sx,sz)-.073,sz),(.020,.008,.026),glint,24,16)
-    oval_patch("Cheek_"+tag,side*.670,.831,.127,.069,cheeks,.015,48,6)
+    oval_patch("Cheek_"+tag,side*.660,.812,.128,.066,cheeks,.095,48,7)
 
 # Mouth has a smiling upper arc and sits flush on the lower cheek.
 oval_patch("Mouth",0.0,.676,.230,.133,mouth,.031,72,11,True)
