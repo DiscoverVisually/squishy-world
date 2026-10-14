@@ -1,132 +1,229 @@
-"""Squishy World: Blender 4.5 LTS cloud authored hero review candidate.
-Non-shipping until silhouette, shader and spring physics are approved in browser.
+"""Squishy World HERO V3 | original Blender 4.5 source & glTF asset.
+Art target: approved Jelly Fantasy concept. Editable sculpt, 7 named shape keys,
+integrated jelly limbs, recessed eyes, layered amber gaze, gradient gel.
+NOT art-approved until normal-camera Godot WebGL2 review. No paid dependencies.
 """
-import bpy, math, os
+import bpy, os, math
+from math import sin, cos, pi, exp, sqrt
 from mathutils import Vector
-from math import sin, pi, exp
-out=os.path.abspath(os.environ.get("ASSET_OUT","production-preview"))
-os.makedirs(out,exist_ok=True)
+
+OUT=os.path.abspath(os.getenv("ASSET_OUT","production-preview"))
+os.makedirs(OUT,exist_ok=True)
 bpy.ops.object.select_all(action="SELECT")
 bpy.ops.object.delete(use_global=False)
-coll=bpy.data.collections.new("Squishy_Runtime_Export")
-bpy.context.scene.collection.children.link(coll)
-def material(name,rgb,rough=.23,coat=.22):
-    m=bpy.data.materials.new(name)
-    m.diffuse_color=(*rgb,1)
-    m.use_nodes=True
-    node=m.node_tree.nodes.get("Principled BSDF")
-    node.inputs["Base Color"].default_value=(*rgb,1)
-    node.inputs["Roughness"].default_value=rough
-    node.inputs["Coat Weight"].default_value=coat
-    return m
-jade=material("Jade_Gel_WebOpaque",(.09,.64,.29),.15,.39)
-mint=material("InnerMint",(.19,.80,.40),.16,.40)
-outline=material("Eye_Outline",(.045,.10,.12),.35)
-white=material("Ivory_Eye",(1,.98,.92),.15)
-iris=material("WarmIris",(.42,.29,.16),.15)
-pupil=material("Ink_Pupil",(.025,.020,.026),.11)
-shine=material("Eye_Gloss",(1,1,1),.12)
-blush=material("Coral_Blush",(.67,.26,.34),.47)
-lip=material("Raspberry_Mouth",(.25,.04,.095),.4)
-tongue=material("Tongue",(.99,.44,.52),.45)
-def runtime(obj):
-    for c in tuple(obj.users_collection): c.objects.unlink(obj)
-    coll.objects.link(obj)
-    if obj.type=="MESH":
-        for p in obj.data.polygons: p.use_smooth=True
-    return obj
-def sphere(name,pos,scale,mat,segments=48,rings=32):
-    bpy.ops.mesh.primitive_uv_sphere_add(segments=segments,ring_count=rings,location=pos)
-    o=bpy.context.object
-    o.name=name
-    o.scale=scale
-    bpy.ops.object.transform_apply(location=False,rotation=False,scale=True)
-    o.data.materials.append(mat)
-    return runtime(o)
+collection=bpy.data.collections.new("SQ_Hero_Runtime")
+bpy.context.scene.collection.children.link(collection)
 
-# Original non-spherical pear contour. Body includes eight animatable shape keys.
-body=sphere("SquishyBody",(0,0,0),(1,1,1),jade,80,50)
-raw=[]
+def keep(obj):
+    for c in tuple(obj.users_collection): c.objects.unlink(obj)
+    collection.objects.link(obj)
+    if obj.type=="MESH":
+        for poly in obj.data.polygons: poly.use_smooth=True
+    return obj
+
+def material(name,color,rough=.21,coat=.30,subs=.0,metal=.0):
+    m=bpy.data.materials.new(name)
+    m.use_nodes=True
+    m.diffuse_color=(*color,1)
+    bs=m.node_tree.nodes.get("Principled BSDF")
+    bs.inputs["Base Color"].default_value=(*color,1)
+    bs.inputs["Roughness"].default_value=rough
+    bs.inputs["Coat Weight"].default_value=coat
+    bs.inputs["Coat Roughness"].default_value=.14
+    bs.inputs["Subsurface Weight"].default_value=subs
+    bs.inputs["Metallic"].default_value=metal
+    return m
+
+gel=material("GEL_Jade_WebCompatible",(.14,.77,.36),.18,.55,.22)
+tip=material("GEL_LuminousSprouts",(.27,.87,.41),.18,.45,.11)
+dark=material("EYE_DeepChocolate",(.018,.016,.021),.12,.4)
+whites=material("EYE_Ivory",(.97,.98,.96),.19,.28)
+honey=material("EYE_AmberRing",(.56,.29,.095),.17,.4)
+inner_honey=material("EYE_IrisGold",(.92,.54,.15),.21,.3)
+pupil=material("EYE_GlassPupil",(.009,.014,.020),.085,.78)
+glint=material("EYE_WhiteSoftbox",(1.0,1.0,1.0),.08,.25)
+cheeks=material("CHEEK_CoralBlush",(.92,.43,.44),.39,.12,.14)
+mouth=material("MOUTH_RaspberryShadow",(.17,.028,.060),.36,.15)
+tongue=material("MOUTH_Rose",(.97,.30,.39),.32,.22)
+
+# Blender-only studio look. Runtime uses production WebGL2 shader.
+nodes=gel.node_tree.nodes
+links=gel.node_tree.links
+bs=nodes.get("Principled BSDF")
+coord=nodes.new("ShaderNodeTexCoord")
+coord.location=(-760,150)
+sep=nodes.new("ShaderNodeSeparateXYZ")
+sep.location=(-560,150)
+links.new(coord.outputs["Generated"],sep.inputs[0])
+ramp=nodes.new("ShaderNodeValToRGB")
+ramp.location=(-325,165)
+ramp.color_ramp.interpolation="EASE"
+ramp.color_ramp.elements.remove(ramp.color_ramp.elements[1])
+def ramp_color(pos,col):
+    e=ramp.color_ramp.elements.new(pos)
+    e.color=(*col,1)
+ramp.color_ramp.elements[0].position=0.0
+ramp.color_ramp.elements[0].color=(.035,.26,.18,1)
+ramp_color(.27,(.045,.47,.25))
+ramp_color(.61,(.12,.77,.34))
+ramp_color(.86,(.34,.89,.46))
+ramp_color(1.0,(.57,.96,.65))
+links.new(sep.outputs["Z"],ramp.inputs[0])
+links.new(ramp.outputs[0],bs.inputs["Base Color"])
+noise=nodes.new("ShaderNodeTexNoise")
+noise.location=(-555,-120)
+noise.inputs["Scale"].default_value=5.4
+noise.inputs["Detail"].default_value=2.0
+noise.inputs["Roughness"].default_value=.6
+links.new(coord.outputs["Generated"],noise.inputs["Vector"])
+micro=nodes.new("ShaderNodeBump")
+micro.location=(-50,-90)
+micro.inputs["Strength"].default_value=.065
+micro.inputs["Distance"].default_value=.012
+links.new(noise.outputs["Fac"],micro.inputs["Height"])
+links.new(micro.outputs["Normal"],bs.inputs["Normal"])
+
+def sphere(name, pos, scale, mat, segments=64,rings=48):
+    bpy.ops.mesh.primitive_uv_sphere_add(segments=segments,ring_count=rings,location=pos)
+    ob=bpy.context.object
+    ob.name=name
+    ob.scale=scale
+    bpy.ops.object.transform_apply(location=False,rotation=False,scale=True)
+    ob.data.materials.append(mat)
+    return keep(ob)
+
+# Sculpted silhouette with subtle offsets: generous base, tapered dome, no toy-sphere.
+body=sphere("SquishyBody",(0,0,0),(1,1,1),gel,128,84)
+base=[]
+def gauss(dx,dy,spread):
+    return exp(-((dx/spread)**2+(dy/spread)**2))
 for v in body.data.vertices:
     x,y,z=v.co
-    width=.90+.10*(1-z)/2
-    depth=.80+.06*(1-z)/2
-    xx=x*width*(1+.024*sin(3*y+z))
-    yy=y*depth
-    zz=.92+.79*z+.02*sin(4*x+2*y)*(1-abs(z))
-    if zz<.12: zz=.12+(zz-.12)*.15
-    v.co=(xx,yy,zz)
-    raw.append(v.co.copy())
-body.shape_key_add(name="Basis")
-def key(name,fn):
-    b=body.shape_key_add(name=name)
-    for i,p in enumerate(raw):
-        b.data[i].co=fn(p)
-key("Squash",lambda p:Vector((p.x*1.20,p.y*1.20,.12+(p.z-.12)*.74)))
-key("StretchUp",lambda p:Vector((p.x*.80,p.y*.80,.12+(p.z-.12)*1.32)))
-key("LeanLeft",lambda p:Vector((p.x-.28*sin(pi*max(.0,min(1.,p.z/2))),p.y,p.z)))
-key("LeanRight",lambda p:Vector((p.x+.28*sin(pi*max(.0,min(1.,p.z/2))),p.y,p.z)))
-key("Impact",lambda p:Vector((p.x*1.16,p.y*1.12,.12+(p.z-.12)*.78)))
-key("PokeFront",lambda p:Vector((p.x,p.y+.22*exp(-(p.x/.35)**2-((p.z-1.1)/.40)**2)*max(0,-p.y),p.z)))
-key("HappyWiggle",lambda p:Vector((p.x+.11*sin(p.z*3.1),p.y,p.z)))
-for x,z,scale,m in [
-    (-.18,1.65,(.115,.14,.155),mint),(.18,1.66,(.085,.11,.12),jade),
-    (-.81,.62,(.17,.24,.20),jade),(.81,.62,(.17,.24,.20),jade),
-    (-.43,.15,(.28,.32,.135),jade),(.43,.15,(.28,.32,.135),jade)]:
-    sphere("Gel_Appendage", (x,0,z),scale,m)
-# Face is separately animated later by FaceAnchor to preserve eye placement on body deformation.
-for side in (-1,1):
-    x=side*.33
-    tag="L" if side<0 else "R"
-    sphere("EyeRim_"+tag,(x,-.726,1.09),(.255,.066,.294),outline)
-    sphere("EyeIvory_"+tag,(x,-.763,1.10),(.235,.047,.270),white)
-    sphere("Iris_"+tag,(x-side*.025,-.807,1.075),(.160,.029,.184),iris)
-    sphere("Pupil_"+tag,(x-side*.025,-.835,1.080),(.123,.018,.145),pupil)
-    sphere("Catchlight_"+tag,(x-side*.025-.045,-.851,1.14),(.048,.013,.059),shine,24,16)
-    sphere("Blush_"+tag,(side*.60,-.64,.80),(.12,.010,.050),blush)
-    # Brows intentionally omitted: the hero reads more warm and toy-like without brows.
-sphere("Mouth",(0,-.796,.67),(.18,.022,.182),lip)
-sphere("Tongue",(0,-.823,.574),(.099,.015,.057),tongue)
+    norm=(z+1.0)*.5
+    width=.99*(1.0-.17*norm)
+    depth=.84*(1.0-.085*norm)
+    ox=x*width
+    oy=y*depth
+    oz=.97+z*.87
+    # Wide lower cheeks, drooping soft sides, asymmetric organic life.
+    ox*=1.0+.024*sin(4.1*y+2.3*z)
+    oz+=.013*sin(6*x+2.1*y)*(1.0-abs(z))
+    # Recessed eyelid sockets are actual deformations in the jelly shell.
+    for sx in (-1.0,1.0):
+        oy+=.065*gauss((ox-sx*.345),oz-1.17,.27)*maxf(0.0,-y)
+        # Soft hand-like protrusions are part of the SAME watertight body.
+        ox+=sx*.17*gauss(ox-sx*.74,oz-.60,.28)*maxf(0.0,abs(x))
+        # Broad gel feet grow from bottom shell; no detached shoe outlines.
+        feet=gauss(ox-sx*.42,oz-.26,.31)*maxf(0.0,-y)
+        oy-=.10*feet
+        oz-=.055*feet
+    if oz<.13: oz=.13+(oz-.13)*.12
+    v.co=(ox,oy,oz)
+    base.append(v.co.copy())
 
+body.shape_key_add(name="Basis",from_mix=False)
+def deform(name,fn):
+    b=body.shape_key_add(name=name,from_mix=False)
+    for i,p in enumerate(base):b.data[i].co=fn(p.copy())
+deform("Squash",lambda p:Vector((p.x*1.19,p.y*1.17,.13+(p.z-.13)*.73)))
+deform("StretchUp",lambda p:Vector((p.x*.83,p.y*.83,.13+(p.z-.13)*1.32)))
+deform("LeanLeft",lambda p:Vector((p.x-.29*sin(pi*max(.0,min(1.0,p.z/1.85))),p.y,p.z)))
+deform("LeanRight",lambda p:Vector((p.x+.29*sin(pi*max(.0,min(1.0,p.z/1.85))),p.y,p.z)))
+deform("Impact",lambda p:Vector((p.x*1.18,p.y*1.15,.13+(p.z-.13)*.77)))
+deform("PokeFront",lambda p:Vector((p.x,p.y+.20*gauss(p.x,p.z-1.07,.36)*max(0,-p.y),p.z)))
+deform("HappyWiggle",lambda p:Vector((p.x+.10*sin(3.0*p.z),p.y,p.z+.018*sin(7.0*p.x))))
+
+# Crown sprouts have deliberately different forms and height. Tiny gel beads.
+crown=[
+(-.19,-.03,1.76, (.107,.128,.16), 0.28),
+(.15,.035,1.77, (.082,.11,.12),-.26),
+(.01,.065,1.82, (.055,.07,.066), 0.0)
+]
+for i,(x,y,z,scale,turn) in enumerate(crown):
+    o=sphere("CrownSoftBud_"+str(i),(x,y,z),scale,tip,48,32)
+    o.rotation_euler[1]=turn
+
+# Contoured face components: much thinner in depth than former sphere patches.
+# Each part keeps a named identity for the Godot face deformation rig.
+for side,tag in [(-1,"L"),(1,"R")]:
+    cx=side*.345
+    sphere("EyeRoot_"+tag,(cx,-.730,1.16),(.265,.038,.318),gel,60,40)
+    sphere("EyeRim_"+tag,(cx,-.750,1.168),(.246,.033,.298),dark,64,44)
+    sphere("EyeIvory_"+tag,(cx,-.776,1.166),(.227,.022,.277),whites,64,44)
+    sphere("Iris_"+tag,(cx-side*.026,-.796,1.154),(.159,.018,.191),honey,64,44)
+    sphere("IrisLight_"+tag,(cx-side*.029,-.812,1.156),(.124,.014,.155),inner_honey,60,44)
+    sphere("Pupil_"+tag,(cx-side*.031,-.829,1.158),(.120,.015,.158),pupil,64,44)
+    sphere("Catchlight_"+tag,(cx-side*.031-.057,-.847,1.242),(.062,.009,.079),glint,40,28)
+    sphere("MicroGlint_"+tag,(cx-side*.031+.063,-.849,1.079),(.021,.007,.029),glint,28,20)
+    sphere("Cheek_"+tag,(side*.675,-.624,.83),(.160,.011,.078),cheeks,64,32)
+
+# Joyful mouth with a dark inside and a bright raised tongue.
+smile=sphere("Mouth",(0,-.790,.686),(.192,.018,.212),mouth,80,48)
+sphere("Tongue",(0,-.808,.590),(.121,.014,.066),tongue,52,36)
+# Subtle glossy lower-lip high point, visually continuous with gel.
+sphere("MouthLip",(0,-.768,.503),(.123,.008,.023),tip,48,24)
+
+# Sculpt quality check and directly editable master.
 bpy.ops.object.select_all(action="DESELECT")
-for ob in coll.objects: ob.select_set(True)
+for ob in collection.objects: ob.select_set(True)
 bpy.context.view_layer.objects.active=body
-blend=os.path.join(out,"hero_squishy.blend")
+blend=os.path.join(OUT,"hero_squishy.blend")
 bpy.ops.wm.save_as_mainfile(filepath=blend)
-glb=os.path.join(out,"hero_squishy.glb")
+glb=os.path.join(OUT,"hero_squishy.glb")
 bpy.ops.export_scene.gltf(filepath=glb, export_format="GLB",
-    use_selection=True,export_apply=False,export_morph=True,
-    export_morph_normal=True,export_yup=True)
+    use_selection=True,export_apply=False,
+    export_morph=True,export_morph_normal=True,export_yup=True)
 
-# Studio render for reviewing volume/face/material candidate (not proof of browser fidelity).
+# Render multiple angles to review at character scale, not only studio glamour.
 bpy.ops.object.select_all(action="DESELECT")
-bpy.ops.object.camera_add(location=(2.55,-5.9,2.42))
-camera=bpy.context.object
-camera.rotation_euler=(Vector((0,0,1.04))-camera.location).to_track_quat("-Z","Y").to_euler()
-camera.data.type="ORTHO"
-camera.data.ortho_scale=3.15
-bpy.context.scene.camera=camera
-for pos,power,size,color in [
-    ((0,-4.0,5.0),440,4.0,(1.0,.93,.85)),
-    ((3,1.3,4.1),580,3.5,(.57,.94,1)),
-    ((-3,-1.0,2.3),180,3.0,(1,.70,.69))]:
-    bpy.ops.object.light_add(type="AREA",location=pos)
-    o=bpy.context.object
-    o.data.energy=power
-    o.data.shape="DISK"
-    o.data.size=size
-    o.data.color=color
-    o.rotation_euler=(Vector((0,0,1))-o.location).to_track_quat("-Z","Y").to_euler()
+def look_at(o,target):
+    o.rotation_euler=(Vector(target)-o.location).to_track_quat("-Z","Y").to_euler()
+bpy.ops.object.camera_add(location=(1.0,-5.8,2.35))
+cam=bpy.context.object
+cam.name="Review_Ortho_Camera"
+cam.data.type="ORTHO"
+cam.data.ortho_scale=2.90
+look_at(cam,(0,0,.95))
+bpy.context.scene.camera=cam
+
+for n,power,size,color,loc in [
+("Key",520,4.5,(1,.93,.81),(-2.6,-3.3,4.5)),
+("CoolRim",610,3.0,(.48,.88,1),(2.7,2.4,3.2)),
+("Fill",210,3.0,(1,.75,.72),(3.0,-2.1,1.8))]:
+    bpy.ops.object.light_add(type="AREA",location=loc)
+    light=bpy.context.object
+    light.name=n
+    light.data.energy=power
+    light.data.shape="DISK"
+    light.data.size=size
+    light.data.color=color
+    look_at(light,(0,0,.95))
+# Neutral plinth makes transparent appearance and contact shadow readable.
+bpy.ops.mesh.primitive_cylinder_add(vertices=120,radius=1.82,depth=.10,location=(0,0,-.03))
+plinth=bpy.context.object
+plinth.name="REVIEW_ONLY_Plinth"
+plinth.data.materials.append(material("REVIEW_MatteSlate",(.21,.29,.34),.65,.04))
+for p in plinth.data.polygons:p.use_smooth=True
 scene=bpy.context.scene
 scene.render.engine="CYCLES"
-scene.cycles.samples=16
-scene.render.resolution_x=720
-scene.render.resolution_y=720
+scene.cycles.samples=32
+scene.cycles.use_denoising=True
+scene.render.resolution_x=800
+scene.render.resolution_y=800
 scene.render.resolution_percentage=100
-scene.world.color=(.12,.15,.19)
 scene.render.image_settings.file_format="PNG"
-scene.render.filepath=os.path.join(out,"hero_preview.png")
-bpy.ops.render.render(write_still=True)
-assert len(body.data.shape_keys.key_blocks)>=8
+scene.world.color=(.16,.19,.23)
+scene.view_settings.view_transform="AgX"
+scene.render.film_transparent=False
+for name,pos in [
+("hero_preview.png",(1.0,-5.8,2.35)),
+("hero_front.png",(0,-6.2,2.0)),
+("hero_side.png",(6.3,-.35,1.95)),
+("hero_back.png",(0,6.2,1.95))]:
+    cam.location=pos
+    look_at(cam,(0,0,.96))
+    scene.render.filepath=os.path.join(OUT,name)
+    bpy.ops.render.render(write_still=True)
+assert len(body.data.shape_keys.key_blocks)==8
 assert os.path.getsize(glb)>10000
 print("SUCCESS: hero preview, editable .blend and morph-enabled .glb",os.path.getsize(glb))
