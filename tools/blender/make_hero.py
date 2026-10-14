@@ -34,8 +34,8 @@ def material(name,color,rough=.21,coat=.30,subs=.0,metal=.0):
     bs.inputs["Metallic"].default_value=metal
     return m
 
-gel=material("GEL_Jade_WebCompatible",(.14,.77,.36),.18,.55,.22)
-tip=material("GEL_LuminousSprouts",(.27,.87,.41),.18,.45,.11)
+gel=material("GEL_Jade_WebCompatible",(.055,.62,.20),.13,.62,.30)
+tip=material("GEL_LuminousSprouts",(.13,.75,.31),.14,.50,.22)
 dark=material("EYE_DeepChocolate",(.018,.016,.021),.12,.4)
 whites=material("EYE_Ivory",(.97,.98,.96),.19,.28)
 honey=material("EYE_AmberRing",(.56,.29,.095),.17,.4)
@@ -63,11 +63,11 @@ def ramp_color(pos,col):
     e=ramp.color_ramp.elements.new(pos)
     e.color=(*col,1)
 ramp.color_ramp.elements[0].position=0.0
-ramp.color_ramp.elements[0].color=(.035,.26,.18,1)
-ramp_color(.27,(.045,.47,.25))
-ramp_color(.61,(.12,.77,.34))
-ramp_color(.86,(.34,.89,.46))
-ramp_color(1.0,(.57,.96,.65))
+ramp.color_ramp.elements[0].color=(.016,.18,.10,1)
+ramp_color(.27,(.035,.34,.12))
+ramp_color(.61,(.055,.60,.20))
+ramp_color(.86,(.21,.77,.31))
+ramp_color(1.0,(.40,.89,.49))
 links.new(sep.outputs["Z"],ramp.inputs[0])
 links.new(ramp.outputs[0],bs.inputs["Base Color"])
 noise=nodes.new("ShaderNodeTexNoise")
@@ -100,11 +100,11 @@ def gauss(dx,dy,spread):
 for v in body.data.vertices:
     x,y,z=v.co
     norm=(z+1.0)*.5
-    width=.99*(1.0-.17*norm)
-    depth=.84*(1.0-.085*norm)
+    width=.99*(1.0-.095*norm)
+    depth=.88*(1.0-.060*norm)
     ox=x*width
     oy=y*depth
-    oz=.97+z*.87
+    oz=.94+z*.84
     # Wide lower cheeks, drooping soft sides, asymmetric organic life.
     ox*=1.0+.024*sin(4.1*y+2.3*z)
     oz+=.013*sin(6*x+2.1*y)*(1.0-abs(z))
@@ -117,7 +117,7 @@ for v in body.data.vertices:
         feet=gauss(ox-sx*.42,oz-.26,.31)*max(0.0,-y)
         oy-=.10*feet
         oz-=.055*feet
-    if oz<.13: oz=.13+(oz-.13)*.12
+    if oz<.29: oz=.29+(oz-.29)*.24
     v.co=(ox,oy,oz)
     base.append(v.co.copy())
 
@@ -135,33 +135,41 @@ deform("HappyWiggle",lambda p:Vector((p.x+.10*sin(3.0*p.z),p.y,p.z+.018*sin(7.0*
 
 # Crown sprouts have deliberately different forms and height. Tiny gel beads.
 crown=[
-(-.19,-.03,1.76, (.107,.128,.16), 0.28),
-(.15,.035,1.77, (.082,.11,.12),-.26),
-(.01,.065,1.82, (.055,.07,.066), 0.0)
+(-.20,-.03,1.72, (.100,.128,.135), 0.28),
+(.15,.035,1.73, (.080,.103,.111),-.26),
+(.01,.065,1.77, (.045,.06,.061), 0.0)
 ]
 for i,(x,y,z,scale,turn) in enumerate(crown):
     o=sphere("CrownSoftBud_"+str(i),(x,y,z),scale,tip,48,32)
     o.rotation_euler[1]=turn
 
+# Distinctive short, squishable side fins and low gel paws; overlap is large,
+# so the silhouette reads as a single soft creature, not four toy cylinders.
+for side,tag in [(-1,"L"),(1,"R")]:
+    fin=sphere("GelFin_"+tag,(side*.82,-.12,.62),(.248,.27,.229),gel,80,48)
+    fin.rotation_euler[1]=side*.22
+    foot=sphere("GelFoot_"+tag,(side*.49,-.28,.22),(.285,.324,.160),gel,80,48)
+    foot.rotation_euler[1]=side*.07
+
 # Contoured face components: much thinner in depth than former sphere patches.
 # Each part keeps a named identity for the Godot face deformation rig.
 for side,tag in [(-1,"L"),(1,"R")]:
     cx=side*.345
-    sphere("EyeRoot_"+tag,(cx,-.730,1.16),(.265,.038,.318),gel,60,40)
-    sphere("EyeRim_"+tag,(cx,-.750,1.168),(.246,.033,.298),dark,64,44)
-    sphere("EyeIvory_"+tag,(cx,-.776,1.166),(.227,.022,.277),whites,64,44)
-    sphere("Iris_"+tag,(cx-side*.026,-.796,1.154),(.159,.018,.191),honey,64,44)
-    sphere("IrisLight_"+tag,(cx-side*.029,-.812,1.156),(.124,.014,.155),inner_honey,60,44)
-    sphere("Pupil_"+tag,(cx-side*.031,-.829,1.158),(.120,.015,.158),pupil,64,44)
-    sphere("Catchlight_"+tag,(cx-side*.031-.057,-.847,1.242),(.062,.009,.079),glint,40,28)
-    sphere("MicroGlint_"+tag,(cx-side*.031+.063,-.849,1.079),(.021,.007,.029),glint,28,20)
-    sphere("Cheek_"+tag,(side*.675,-.624,.83),(.160,.011,.078),cheeks,64,32)
+    sphere("EyeRoot_"+tag,(cx,-.765,1.175),(.246,.028,.298),gel,60,40)
+    sphere("EyeRim_"+tag,(cx,-.777,1.173),(.236,.022,.288),dark,64,44)
+    sphere("EyeIvory_"+tag,(cx,-.793,1.174),(.223,.017,.270),whites,64,44)
+    sphere("Iris_"+tag,(cx-side*.026,-.810,1.159),(.183,.015,.213),honey,64,44)
+    sphere("IrisLight_"+tag,(cx-side*.029,-.827,1.161),(.151,.013,.180),inner_honey,60,44)
+    sphere("Pupil_"+tag,(cx-side*.031,-.843,1.163),(.146,.012,.183),pupil,64,44)
+    sphere("Catchlight_"+tag,(cx-side*.031-.063,-.859,1.239),(.056,.008,.063),glint,40,28)
+    sphere("MicroGlint_"+tag,(cx-side*.031+.075,-.861,1.095),(.017,.006,.023),glint,28,20)
+    sphere("Cheek_"+tag,(side*.67,-.685,.83),(.126,.009,.058),cheeks,64,32)
 
 # Joyful mouth with a dark inside and a bright raised tongue.
-smile=sphere("Mouth",(0,-.790,.686),(.192,.018,.212),mouth,80,48)
-sphere("Tongue",(0,-.808,.590),(.121,.014,.066),tongue,52,36)
+smile=sphere("Mouth",(0,-.828,.685),(.226,.019,.143),mouth,80,48)
+sphere("Tongue",(0,-.846,.616),(.116,.012,.044),tongue,52,36)
 # Subtle glossy lower-lip high point, visually continuous with gel.
-sphere("MouthLip",(0,-.768,.503),(.123,.008,.023),tip,48,24)
+sphere("MouthLip",(0,-.799,.547),(.128,.007,.016),tip,48,24)
 
 # Sculpt quality check and directly editable master.
 bpy.ops.object.select_all(action="DESELECT")
@@ -182,14 +190,14 @@ bpy.ops.object.camera_add(location=(1.0,-5.8,2.35))
 cam=bpy.context.object
 cam.name="Review_Ortho_Camera"
 cam.data.type="ORTHO"
-cam.data.ortho_scale=2.90
+cam.data.ortho_scale=3.11
 look_at(cam,(0,0,.95))
 bpy.context.scene.camera=cam
 
 for n,power,size,color,loc in [
-("Key",520,4.5,(1,.93,.81),(-2.6,-3.3,4.5)),
-("CoolRim",610,3.0,(.48,.88,1),(2.7,2.4,3.2)),
-("Fill",210,3.0,(1,.75,.72),(3.0,-2.1,1.8))]:
+("Key",330,4.5,(1,.93,.81),(-2.6,-3.3,4.5)),
+("CoolRim",420,3.0,(.48,.88,1),(2.7,2.4,3.2)),
+("Fill",160,3.0,(1,.75,.72),(3.0,-2.1,1.8))]:
     bpy.ops.object.light_add(type="AREA",location=loc)
     light=bpy.context.object
     light.name=n
@@ -213,7 +221,9 @@ scene.render.resolution_y=800
 scene.render.resolution_percentage=100
 scene.render.image_settings.file_format="PNG"
 scene.world.color=(.16,.19,.23)
-scene.view_settings.view_transform="AgX"
+scene.view_settings.view_transform="Standard"
+scene.view_settings.look="Medium High Contrast"
+scene.view_settings.exposure=-0.2
 scene.render.film_transparent=False
 for name,pos in [
 ("hero_preview.png",(1.0,-5.8,2.35)),
