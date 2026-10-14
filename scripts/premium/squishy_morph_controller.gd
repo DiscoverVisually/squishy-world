@@ -16,6 +16,10 @@ var morph_indices: Dictionary = {}
 var skin_material: ShaderMaterial = null
 var attached_parts: Array[Node3D] = []
 var attached_rest_positions: Array[Vector3] = []
+var attached_rest_scales: Array[Vector3] = []
+var blink_cooldown: float = 3.1
+var blink_elapsed: float = -1.0
+var expression_energy: float = 0.0
 
 var is_dragging: bool = false
 var grab_location: Vector3 = Vector3.ZERO
@@ -52,6 +56,7 @@ func _ready() -> void:
                 continue
             attached_parts.append(part)
             attached_rest_positions.append(part.position)
+            attached_rest_scales.append(part.scale)
     print("Jelly Physics 2.0 READY: %d spring points, %d facial/appendage parts" % [
         lattice.anchors.size(), attached_parts.size()])
 
@@ -63,6 +68,7 @@ func _physics_process(delta: float) -> void:
     lattice.step(delta)
     _update_global_morphs(delta)
     _update_attached_face()
+    _animate_face(delta)
     if skin_material != null:
         skin_material.set_shader_parameter("node_shift", lattice.offsets)
 
@@ -119,6 +125,36 @@ func _update_attached_face() -> void:
         shifted.z *= radial
         shifted += _displacement_at(original)
         part.position = shifted
+
+func _animate_face(delta: float) -> void:
+    # Deterministic, child-friendly facial reactions without additional GLB rigs.
+    # Local eyes and mouth are deformed AFTER their attachment points move with jelly.
+    var blink_amount: float = 0.0
+    if blink_elapsed >= 0.0:
+        blink_elapsed += delta
+        blink_amount = sin(PI * clampf(blink_elapsed / 0.195, 0.0, 1.0))
+        if blink_elapsed >= 0.195:
+            blink_elapsed = -1.0
+            blink_cooldown = 2.65 + absf(sin(idle_time * 2.17)) * 2.2
+    else:
+        blink_cooldown -= delta
+        if blink_cooldown <= 0.0:
+            blink_elapsed = 0.0
+    var wobble: float = lattice.max_displacement()
+    var stretch_surprise: float = clampf(wobble * 1.65, 0.0, 0.45)
+    var impact_squint: float = clampf(float(channels["Impact"].value) * 0.78, 0.0, 0.40)
+    var eye_scale: float = clampf(1.0 + stretch_surprise * 0.12 - 0.90 * blink_amount - impact_squint, 0.08, 1.14)
+    var mouth_scale: float = 1.0 + stretch_surprise * 0.68
+    for i in range(attached_parts.size()):
+        var part: Node3D = attached_parts[i]
+        if not is_instance_valid(part):
+            continue
+        var rest: Vector3 = attached_rest_scales[i]
+        var n: String = part.name
+        if n.begins_with("Eye") or n.begins_with("Iris") or n.begins_with("Pupil") or n.begins_with("Catchlight") or n.begins_with("MicroGlint"):
+            part.scale = Vector3(rest.x, rest.y * eye_scale, rest.z)
+        elif n == "Mouth" or n == "Tongue":
+            part.scale = Vector3(rest.x * (1.0 + 0.13 * stretch_surprise), rest.y * mouth_scale, rest.z)
 
 func _unhandled_input(event: InputEvent) -> void:
     if input_camera == null or character_collider == null or body_mesh == null:
