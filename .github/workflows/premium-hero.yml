@@ -95,6 +95,15 @@ jobs:
           test -s premium-web/index.html
           test -s premium-web/index.wasm
           test -s premium-web/index.pck
+      - name: Bundle model review gallery with isolated browser lab
+        run: |
+          mkdir -p premium-web/reviews
+          cp /tmp/premium-asset/hero_preview.png premium-web/reviews/
+          cp /tmp/premium-asset/hero_front.png premium-web/reviews/
+          cp /tmp/premium-asset/hero_side.png premium-web/reviews/
+          cp /tmp/premium-asset/hero_back.png premium-web/reviews/
+          cp tools/blender/hero_gallery.html premium-web/reviews/index.html
+          test -s premium-web/reviews/hero_front.png
       - name: Upload browser testing build without publishing production
         uses: actions/upload-artifact@v4
         with:
